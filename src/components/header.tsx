@@ -12,6 +12,7 @@ const navLinks = [
   { href: '/jobs-created', label: 'Jobs Created' },
   { href: '/productivity', label: 'Productivity' },
   { href: '/robots', label: 'Robot Tracker' },
+  { href: '/net-impact', label: 'Net Impact' },
   { href: '/job-security', label: 'Job Security' },
   { href: '/methodology', label: 'Methodology' },
 ]
