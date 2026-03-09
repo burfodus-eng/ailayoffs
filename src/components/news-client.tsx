@@ -71,12 +71,12 @@ function EventPopup({ event, onClose }: { event: EventData; onClose: () => void 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       <div
-        className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl"
+        className="relative bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Logo header */}
         {logoUrl && (
-          <div className="h-20 bg-gray-50 dark:bg-gray-750 flex items-center justify-center border-b border-gray-100 dark:border-gray-700 rounded-t-lg">
+          <div className="h-20 bg-gray-50 dark:bg-[var(--dark-surface)] flex items-center justify-center border-b border-gray-100 dark:border-[var(--dark-border)] rounded-t-lg">
             <img
               src={logoUrl}
               alt={event.companyName || ''}
@@ -95,33 +95,33 @@ function EventPopup({ event, onClose }: { event: EventData; onClose: () => void 
             <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded ${categoryStyle(event.attributionCategory)}`}>
               {event.attributionCategory}
             </span>
-            <span className="px-2 py-0.5 text-[9px] font-bold uppercase rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+            <span className="px-2 py-0.5 text-[9px] font-bold uppercase rounded bg-gray-100 dark:bg-[var(--dark-surface)] text-gray-600 dark:text-[var(--dark-text)]">
               {eventTypeLabel(event.eventType)}
             </span>
           </div>
 
-          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-[var(--dark-text)] mb-2">
             {event.companyName}: {event.jobsCutAnnounced?.toLocaleString() || event.weightedAiJobs.toLocaleString()} jobs {event.eventType === 'AI_JOB_CREATED' ? 'created' : 'cut'}
           </h2>
 
-          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-3">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-[var(--dark-muted)] mb-3">
             {event.dateAnnounced && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatDate(event.dateAnnounced)}</span>}
             {event.country && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{event.country}</span>}
             {event.industry && <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" />{event.industry}</span>}
           </div>
 
           {event.publicSummary && (
-            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-4">{event.publicSummary}</p>
+            <p className="text-sm text-gray-600 dark:text-[var(--dark-text)] leading-relaxed mb-4">{event.publicSummary}</p>
           )}
 
-          <div className="flex items-center gap-3 text-xs tabular-nums mb-4 p-3 bg-gray-50 dark:bg-gray-750 rounded border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-3 text-xs tabular-nums mb-4 p-3 bg-gray-50 dark:bg-[var(--dark-surface)] rounded border border-gray-100 dark:border-[var(--dark-border)]">
             <span className="text-green-700 dark:text-green-400">Conservative: {event.conservativeAiJobs.toLocaleString()}</span>
             <span className="font-bold text-amber-700 dark:text-amber-400">Core: {event.weightedAiJobs.toLocaleString()}</span>
             <span className="text-red-600 dark:text-red-400">Upper: {event.upperAiJobs.toLocaleString()}</span>
           </div>
 
           {article && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+            <p className="text-xs text-gray-500 dark:text-[var(--dark-muted)] mb-4">
               Source: {article.source?.name || article.source?.domain || 'Unknown'}
             </p>
           )}
@@ -183,12 +183,12 @@ export function NewsClient({ events, countries, industries }: { events: EventDat
 
       <div className="flex items-end justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">News & Sources</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{filtered.length} events from public reporting</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-[var(--dark-text)]">News & Sources</h1>
+          <p className="text-gray-500 dark:text-[var(--dark-muted)] text-sm mt-1">{filtered.length} events from public reporting</p>
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-3 py-2 text-sm border rounded-md transition-colors ${showFilters ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+          className={`flex items-center gap-2 px-3 py-2 text-sm border rounded-md transition-colors ${showFilters ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 dark:border-[var(--dark-border)] text-gray-600 dark:text-[var(--dark-text)] hover:bg-gray-50 dark:hover:bg-gray-700'}`}
         >
           <Filter className="h-4 w-4" />
           Filters {activeFilters > 0 && `(${activeFilters})`}
@@ -196,31 +196,31 @@ export function NewsClient({ events, countries, industries }: { events: EventDat
       </div>
 
       {showFilters && (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6 bg-white dark:bg-gray-800">
+        <div className="border border-gray-200 dark:border-[var(--dark-border)] rounded-lg p-4 mb-6 bg-white dark:bg-[var(--dark-card)]">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <input
               type="text"
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 text-sm border border-gray-200 dark:border-[var(--dark-border)] rounded-md bg-white dark:bg-[var(--dark-surface)] text-gray-900 dark:text-[var(--dark-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <select value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+            <select value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 dark:border-[var(--dark-border)] rounded-md bg-white dark:bg-[var(--dark-surface)] text-gray-700 dark:text-[var(--dark-text)]">
               <option value="">All Countries</option>
               {countries.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <select value={industryFilter} onChange={(e) => setIndustryFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+            <select value={industryFilter} onChange={(e) => setIndustryFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 dark:border-[var(--dark-border)] rounded-md bg-white dark:bg-[var(--dark-surface)] text-gray-700 dark:text-[var(--dark-text)]">
               <option value="">All Industries</option>
               {industries.map(i => <option key={i} value={i}>{i}</option>)}
             </select>
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 dark:border-[var(--dark-border)] rounded-md bg-white dark:bg-[var(--dark-surface)] text-gray-700 dark:text-[var(--dark-text)]">
               <option value="">All Attribution</option>
               <option value="EXPLICIT">Explicit</option>
               <option value="STRONG">Strong</option>
               <option value="MODERATE">Moderate</option>
               <option value="WEAK">Weak</option>
             </select>
-            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 dark:border-[var(--dark-border)] rounded-md bg-white dark:bg-[var(--dark-surface)] text-gray-700 dark:text-[var(--dark-text)]">
               <option value="">All Types</option>
               <option value="AI_LAYOFF">AI Layoffs</option>
               <option value="ROBOT_LAYOFF">Robot / Automation</option>
@@ -264,9 +264,9 @@ function FeaturedCard({ event, onPreview }: { event: EventData; onPreview: () =>
 
   return (
     <div onClick={onPreview} className="block group cursor-pointer">
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800 hover:shadow-lg transition-shadow">
+      <div className="border border-gray-200 dark:border-[var(--dark-border)] rounded-lg overflow-hidden bg-white dark:bg-[var(--dark-card)] hover:shadow-lg transition-shadow">
         <div className="flex flex-col md:flex-row">
-          <div className="md:w-72 h-48 md:h-auto bg-gray-50 dark:bg-gray-750 flex items-center justify-center shrink-0 relative overflow-hidden">
+          <div className="md:w-72 h-48 md:h-auto bg-gray-50 dark:bg-[var(--dark-surface)] flex items-center justify-center shrink-0 relative overflow-hidden">
             {logoUrl ? (
               <img
                 src={logoUrl}
@@ -290,18 +290,18 @@ function FeaturedCard({ event, onPreview }: { event: EventData; onPreview: () =>
           </div>
 
           <div className="p-6 flex-1">
-            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-2">
+            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-[var(--dark-muted)] mb-2">
               {event.dateAnnounced && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatDate(event.dateAnnounced)}</span>}
               {event.country && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{event.country}</span>}
               {event.industry && <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" />{event.industry}</span>}
             </div>
 
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-[var(--dark-text)] mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
               {event.companyName}: {event.jobsCutAnnounced?.toLocaleString() || event.weightedAiJobs.toLocaleString()} jobs {event.eventType === 'AI_JOB_CREATED' ? 'created' : 'cut'}
             </h2>
 
             {event.publicSummary && (
-              <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-4">{event.publicSummary}</p>
+              <p className="text-gray-500 dark:text-[var(--dark-muted)] text-sm leading-relaxed mb-4">{event.publicSummary}</p>
             )}
 
             <div className="flex items-center justify-between">
@@ -329,8 +329,8 @@ function StoryCard({ event, onPreview }: { event: EventData; onPreview: () => vo
 
   return (
     <div onClick={onPreview} className="block group cursor-pointer">
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800 hover:shadow-lg transition-shadow h-full flex flex-col">
-        <div className="h-32 bg-gray-50 dark:bg-gray-750 flex items-center justify-center relative overflow-hidden">
+      <div className="border border-gray-200 dark:border-[var(--dark-border)] rounded-lg overflow-hidden bg-white dark:bg-[var(--dark-card)] hover:shadow-lg transition-shadow h-full flex flex-col">
+        <div className="h-32 bg-gray-50 dark:bg-[var(--dark-surface)] flex items-center justify-center relative overflow-hidden">
           {logoUrl ? (
             <img
               src={logoUrl}
@@ -354,21 +354,21 @@ function StoryCard({ event, onPreview }: { event: EventData; onPreview: () => vo
         </div>
 
         <div className="p-4 flex-1 flex flex-col">
-          <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400 mb-2">
+          <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-[var(--dark-muted)] mb-2">
             {event.dateAnnounced && <span>{formatDate(event.dateAnnounced)}</span>}
             {event.country && <><span className="text-gray-300 dark:text-gray-600">|</span><span>{event.country}</span></>}
             {event.industry && <><span className="text-gray-300 dark:text-gray-600">|</span><span>{event.industry}</span></>}
           </div>
 
-          <h3 className="font-bold text-sm text-gray-900 dark:text-gray-100 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
+          <h3 className="font-bold text-sm text-gray-900 dark:text-[var(--dark-text)] mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
             {event.companyName}: {event.jobsCutAnnounced?.toLocaleString() || event.weightedAiJobs.toLocaleString()} jobs {event.eventType === 'AI_JOB_CREATED' ? 'created' : 'cut'}
           </h3>
 
           {event.publicSummary && (
-            <p className="text-gray-500 dark:text-gray-400 text-xs leading-relaxed line-clamp-3 mb-3 flex-1">{event.publicSummary}</p>
+            <p className="text-gray-500 dark:text-[var(--dark-muted)] text-xs leading-relaxed line-clamp-3 mb-3 flex-1">{event.publicSummary}</p>
           )}
 
-          <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100 dark:border-[var(--dark-border)]">
             <span className="text-xs font-bold tabular-nums text-amber-700 dark:text-amber-400">
               {event.weightedAiJobs.toLocaleString()} weighted
             </span>

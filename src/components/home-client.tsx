@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { useBrand } from '@/lib/brand-context'
 import type { BrandConfig } from '@/lib/domains'
 import Link from 'next/link'
-import { ArrowRight, ExternalLink, BarChart3, Table2, ZoomIn, ZoomOut } from 'lucide-react'
+import { ArrowRight, BarChart3, Table2, ZoomIn, ZoomOut, X, Clock, MapPin, Briefcase } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
   AreaChart, Area, BarChart, Bar, CartesianGrid,
@@ -59,13 +59,46 @@ const fmtAxis = (value: number) => {
   return value.toString()
 }
 
+// Compute cumulative chart data from events
+function buildChartData(events: EventData[]): ChartPoint[] {
+  const sorted = [...events]
+    .filter(e => e.dateAnnounced)
+    .sort((a, b) => new Date(a.dateAnnounced!).getTime() - new Date(b.dateAnnounced!).getTime())
+
+  let cumC = 0, cumW = 0, cumU = 0
+  return sorted.map(e => {
+    cumC += e.conservativeAiJobs
+    cumW += e.weightedAiJobs
+    cumU += e.upperAiJobs
+    return {
+      date: e.dateAnnounced!.split('T')[0],
+      company: e.companyName || '',
+      conservative: cumC,
+      core: cumW,
+      upper: cumU,
+    }
+  })
+}
+
+// Compute stats from filtered events
+function buildStats(events: EventData[], lastUpdated: string | null): StatsData {
+  let conservative = 0, core = 0, upper = 0, totalAnnounced = 0
+  for (const e of events) {
+    conservative += e.conservativeAiJobs
+    core += e.weightedAiJobs
+    upper += e.upperAiJobs
+    totalAnnounced += e.jobsCutAnnounced || 0
+  }
+  return { conservative, core, upper, totalAnnounced, eventCount: events.length, reviewedPercent: 0, lastUpdated }
+}
+
 function catBadge(cat: string) {
   switch (cat) {
     case 'EXPLICIT': return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
     case 'STRONG': return 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800'
     case 'MODERATE': return 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800'
-    case 'WEAK': return 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700/30 dark:text-gray-400 dark:border-gray-600'
-    default: return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700/30 dark:text-gray-400 dark:border-gray-600'
+    case 'WEAK': return 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-[var(--dark-surface)]/30 dark:text-[var(--dark-muted)] dark:border-[var(--dark-border)]'
+    default: return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-[var(--dark-surface)]/30 dark:text-[var(--dark-muted)] dark:border-[var(--dark-border)]'
   }
 }
 
@@ -98,7 +131,7 @@ function Filters({ events, countryFilter, setCountryFilter, industryFilter, setI
       <select
         value={countryFilter}
         onChange={(e) => setCountryFilter(e.target.value)}
-        className="px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+        className="px-2 py-1 text-xs border border-gray-200 dark:border-[var(--dark-border)] rounded bg-white dark:bg-[var(--dark-surface)] text-gray-700 dark:text-[var(--dark-text)]"
       >
         <option value="">All Countries</option>
         {countries.map(c => <option key={c} value={c}>{c}</option>)}
@@ -106,7 +139,7 @@ function Filters({ events, countryFilter, setCountryFilter, industryFilter, setI
       <select
         value={industryFilter}
         onChange={(e) => setIndustryFilter(e.target.value)}
-        className="px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+        className="px-2 py-1 text-xs border border-gray-200 dark:border-[var(--dark-border)] rounded bg-white dark:bg-[var(--dark-surface)] text-gray-700 dark:text-[var(--dark-text)]"
       >
         <option value="">All Industries</option>
         {industries.map(i => <option key={i} value={i}>{i}</option>)}
@@ -193,46 +226,91 @@ function ChartWithZoom({ chartData, chartType }: { chartData: ChartPoint[]; char
   )
 }
 
-// Event table with links to internal pages
-function EventTable({ events, compact }: { events: EventData[]; compact?: boolean }) {
+// Event preview popup
+function EventPopup({ event, onClose }: { event: EventData; onClose: () => void }) {
+  const article = event.articleEvents[0]?.article
+  const logoUrl = article ? (() => { try { return `https://logo.clearbit.com/${new URL(article.url).hostname}?size=200` } catch { return '' } })() : ''
+
   return (
-    <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700">
-            {['Date', 'Company', 'Country', 'Industry', 'Attribution', 'Announced', 'Conservative', 'Core', 'Upper', 'Src'].map((h, i) => (
-              <th key={h} className={`p-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 ${i >= 5 ? 'text-right' : 'text-left'} ${i === 9 ? 'text-center' : ''} ${compact && (i === 2 || i === 3) ? 'hidden lg:table-cell' : i === 2 ? 'hidden sm:table-cell' : i === 3 ? 'hidden md:table-cell' : ''} ${i === 9 ? 'hidden lg:table-cell' : ''}`}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {events.map((event, i) => (
-            <tr key={event.id} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors ${i % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-gray-750/50'}`}>
-              <td className="p-2 text-xs text-gray-400 whitespace-nowrap">{event.dateAnnounced ? new Date(event.dateAnnounced).toISOString().split('T')[0] : '—'}</td>
-              <td className="p-2 font-medium whitespace-nowrap">
-                <Link href={`/event/${event.id}`} className="text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                  {event.companyName || '—'}
-                </Link>
-              </td>
-              <td className={`p-2 text-xs text-gray-500 dark:text-gray-400 ${compact ? 'hidden lg:table-cell' : 'hidden sm:table-cell'}`}>{event.country || '—'}</td>
-              <td className={`p-2 text-xs text-gray-500 dark:text-gray-400 ${compact ? 'hidden lg:table-cell' : 'hidden md:table-cell'}`}>{event.industry || '—'}</td>
-              <td className="p-2"><span className={`inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase border rounded ${catBadge(event.attributionCategory)}`}>{event.attributionCategory}</span></td>
-              <td className="p-2 text-right tabular-nums text-gray-500 dark:text-gray-400">{event.jobsCutAnnounced?.toLocaleString() || '—'}</td>
-              <td className="p-2 text-right tabular-nums text-green-700 dark:text-green-400">{event.conservativeAiJobs.toLocaleString()}</td>
-              <td className="p-2 text-right tabular-nums font-bold text-amber-700 dark:text-amber-400">{event.weightedAiJobs.toLocaleString()}</td>
-              <td className="p-2 text-right tabular-nums text-red-600 dark:text-red-400">{event.upperAiJobs.toLocaleString()}</td>
-              <td className="p-2 text-center hidden lg:table-cell">
-                <Link href={`/event/${event.id}`} className="text-blue-500 hover:text-blue-700 dark:text-blue-400">
-                  <ExternalLink className="h-3 w-3 inline" />
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="relative bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        {logoUrl && (
+          <div className="h-20 bg-gray-50 dark:bg-[var(--dark-surface)] flex items-center justify-center border-b border-gray-100 dark:border-[var(--dark-border)] rounded-t-lg">
+            <img src={logoUrl} alt={event.companyName || ''} className="w-12 h-12 object-contain opacity-70" onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
+          </div>
+        )}
+        <div className="p-6">
+          <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><X className="h-5 w-5" /></button>
+          <div className="flex items-center gap-2 mb-3">
+            <span className={`inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase border rounded ${catBadge(event.attributionCategory)}`}>{event.attributionCategory}</span>
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-[var(--dark-text)] mb-2">
+            {event.companyName}: {event.jobsCutAnnounced?.toLocaleString() || event.weightedAiJobs.toLocaleString()} jobs
+          </h2>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-[var(--dark-muted)] mb-3">
+            {event.dateAnnounced && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(event.dateAnnounced).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>}
+            {event.country && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{event.country}</span>}
+            {event.industry && <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" />{event.industry}</span>}
+          </div>
+          {event.publicSummary && <p className="text-sm text-gray-600 dark:text-[var(--dark-text)] leading-relaxed mb-4">{event.publicSummary}</p>}
+          <div className="flex items-center gap-3 text-xs tabular-nums mb-4 p-3 bg-gray-50 dark:bg-[var(--dark-surface)] rounded border border-gray-100 dark:border-[var(--dark-border)]">
+            <span className="text-green-700 dark:text-green-400">Conservative: {event.conservativeAiJobs.toLocaleString()}</span>
+            <span className="font-bold text-amber-700 dark:text-amber-400">Core: {event.weightedAiJobs.toLocaleString()}</span>
+            <span className="text-red-600 dark:text-red-400">Upper: {event.upperAiJobs.toLocaleString()}</span>
+          </div>
+          {article && <p className="text-xs text-gray-500 dark:text-[var(--dark-muted)] mb-4">Source: {article.title || 'Unknown'}</p>}
+          <Link href={`/event/${event.id}`} className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors" onClick={onClose}>
+            Read Full Summary <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
     </div>
+  )
+}
+
+// Event table with popup preview
+function EventTable({ events, compact }: { events: EventData[]; compact?: boolean }) {
+  const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null)
+
+  return (
+    <>
+      {selectedEvent && <EventPopup event={selectedEvent} onClose={() => setSelectedEvent(null)} />}
+      <div className="overflow-x-auto border border-gray-200 dark:border-[var(--dark-border)] bg-white dark:bg-[var(--dark-card)]">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 dark:bg-[var(--dark-surface)] border-b border-gray-200 dark:border-[var(--dark-border)]">
+              {['Date', 'Company', 'Country', 'Industry', 'Attribution', 'Announced', 'Conservative', 'Core', 'Upper'].map((h, i) => (
+                <th key={h} className={`p-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-[var(--dark-muted)] ${i >= 5 ? 'text-right' : 'text-left'} ${compact && (i === 2 || i === 3) ? 'hidden lg:table-cell' : i === 2 ? 'hidden sm:table-cell' : i === 3 ? 'hidden md:table-cell' : ''}`}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((event, i) => (
+              <tr
+                key={event.id}
+                className={`border-b border-gray-100 dark:border-[var(--dark-border)] hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors cursor-pointer ${i % 2 === 0 ? 'bg-white dark:bg-[var(--dark-card)]' : 'bg-gray-50/50 dark:bg-[var(--dark-surface)]/50'}`}
+                onClick={() => setSelectedEvent(event)}
+              >
+                <td className="p-2 text-xs text-gray-400 whitespace-nowrap">{event.dateAnnounced ? new Date(event.dateAnnounced).toISOString().split('T')[0] : '—'}</td>
+                <td className="p-2 font-medium whitespace-nowrap text-gray-900 dark:text-[var(--dark-text)] hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                  {event.companyName || '—'}
+                </td>
+                <td className={`p-2 text-xs text-gray-500 dark:text-[var(--dark-muted)] ${compact ? 'hidden lg:table-cell' : 'hidden sm:table-cell'}`}>{event.country || '—'}</td>
+                <td className={`p-2 text-xs text-gray-500 dark:text-[var(--dark-muted)] ${compact ? 'hidden lg:table-cell' : 'hidden md:table-cell'}`}>{event.industry || '—'}</td>
+                <td className="p-2"><span className={`inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase border rounded ${catBadge(event.attributionCategory)}`}>{event.attributionCategory}</span></td>
+                <td className="p-2 text-right tabular-nums text-gray-500 dark:text-[var(--dark-muted)]">{event.jobsCutAnnounced?.toLocaleString() || '—'}</td>
+                <td className="p-2 text-right tabular-nums text-green-700 dark:text-green-400">{event.conservativeAiJobs.toLocaleString()}</td>
+                <td className="p-2 text-right tabular-nums font-bold text-amber-700 dark:text-amber-400">{event.weightedAiJobs.toLocaleString()}</td>
+                <td className="p-2 text-right tabular-nums text-red-600 dark:text-red-400">{event.upperAiJobs.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   )
 }
 
@@ -240,25 +318,25 @@ function EventTable({ events, compact }: { events: EventData[]; compact?: boolea
 function HeroNumber({ stats, trackingLabel }: { stats: StatsData; trackingLabel: string }) {
   return (
     <div className="text-center py-8">
-      <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 dark:text-gray-500 mb-2">{trackingLabel}</p>
-      <div className="text-6xl sm:text-7xl md:text-8xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
+      <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 dark:text-[var(--dark-muted)] mb-2">{trackingLabel}</p>
+      <div className="text-6xl sm:text-7xl md:text-8xl font-bold tabular-nums text-gray-900 dark:text-[var(--dark-text)]">
         {fmt(stats.core)}
       </div>
-      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Core weighted estimate</p>
+      <p className="text-xs text-gray-400 dark:text-[var(--dark-muted)] mt-2">Core weighted estimate</p>
       <div className="flex items-center justify-center gap-6 sm:gap-10 mt-6">
         {[
           { label: 'Conservative', value: stats.conservative, cls: 'text-green-700 dark:text-green-400' },
           { label: 'Upper Bound', value: stats.upper, cls: 'text-red-600 dark:text-red-400' },
-          { label: 'Announced', value: stats.totalAnnounced, cls: 'text-gray-600 dark:text-gray-300' },
-          { label: 'Events', value: stats.eventCount, cls: 'text-gray-600 dark:text-gray-300' },
+          { label: 'Announced', value: stats.totalAnnounced, cls: 'text-gray-600 dark:text-[var(--dark-text)]' },
+          { label: 'Events', value: stats.eventCount, cls: 'text-gray-600 dark:text-[var(--dark-text)]' },
         ].map(s => (
           <div key={s.label} className="text-center">
-            <div className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">{s.label}</div>
+            <div className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-[var(--dark-muted)]">{s.label}</div>
             <div className={`text-xl font-bold tabular-nums ${s.cls}`}>{fmt(s.value)}</div>
           </div>
         ))}
       </div>
-      <div className="mt-3 text-[10px] text-gray-400 dark:text-gray-500">
+      <div className="mt-3 text-[10px] text-gray-400 dark:text-[var(--dark-muted)]">
         {stats.lastUpdated && <>Updated {stats.lastUpdated.split('T')[0]}</>}
       </div>
     </div>
@@ -267,10 +345,10 @@ function HeroNumber({ stats, trackingLabel }: { stats: StatsData; trackingLabel:
 
 // Chart/Events view switcher
 function ChartEventsSwitcher({
-  chartData, events, chartType, countryFilter, setCountryFilter, industryFilter, setIndustryFilter
+  filteredEvents, allEvents, chartType, countryFilter, setCountryFilter, industryFilter, setIndustryFilter
 }: {
-  chartData: ChartPoint[]
-  events: EventData[]
+  filteredEvents: EventData[]
+  allEvents: EventData[]
   chartType: 'area' | 'line' | 'bar'
   countryFilter: string
   setCountryFilter: (v: string) => void
@@ -278,24 +356,17 @@ function ChartEventsSwitcher({
   setIndustryFilter: (v: string) => void
 }) {
   const [view, setView] = useState<'chart' | 'events'>('chart')
-
-  const filtered = useMemo(() => {
-    return events.filter(e => {
-      if (countryFilter && e.country !== countryFilter) return false
-      if (industryFilter && e.industry !== industryFilter) return false
-      return true
-    })
-  }, [events, countryFilter, industryFilter])
+  const chartData = useMemo(() => buildChartData(filteredEvents), [filteredEvents])
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4">
+    <div className="bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-[var(--dark-muted)]">
             {view === 'chart' ? 'Cumulative Impact' : 'Event Log'}
           </h2>
           <Filters
-            events={events}
+            events={allEvents}
             countryFilter={countryFilter}
             setCountryFilter={setCountryFilter}
             industryFilter={industryFilter}
@@ -305,14 +376,14 @@ function ChartEventsSwitcher({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setView('chart')}
-            className={`p-1.5 rounded ${view === 'chart' ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            className={`p-1.5 rounded ${view === 'chart' ? 'bg-gray-100 dark:bg-[var(--dark-surface)] text-gray-900 dark:text-[var(--dark-text)]' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
             title="Chart view"
           >
             <BarChart3 className="h-4 w-4" />
           </button>
           <button
             onClick={() => setView('events')}
-            className={`p-1.5 rounded ${view === 'events' ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            className={`p-1.5 rounded ${view === 'events' ? 'bg-gray-100 dark:bg-[var(--dark-surface)] text-gray-900 dark:text-[var(--dark-text)]' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
             title="Event list"
           >
             <Table2 className="h-4 w-4" />
@@ -324,7 +395,7 @@ function ChartEventsSwitcher({
         <ChartWithZoom chartData={chartData} chartType={chartType} />
       ) : (
         <div className="max-h-[380px] overflow-y-auto">
-          <EventTable events={filtered} />
+          <EventTable events={filteredEvents} />
         </div>
       )}
     </div>
@@ -346,22 +417,25 @@ function ReportLayout({ allEvents, chartData, hasData, stats, trackingLabel }: H
     })
   }, [allEvents, countryFilter, industryFilter])
 
+  const isFiltered = countryFilter || industryFilter
+  const displayStats = useMemo(() => isFiltered ? buildStats(filtered, stats.lastUpdated) : stats, [isFiltered, filtered, stats])
+
   if (!hasData) {
-    return <div className="min-h-[60vh] flex items-center justify-center bg-gray-50 dark:bg-gray-900"><p className="text-gray-400">No data available yet.</p></div>
+    return <div className="min-h-[60vh] flex items-center justify-center bg-gray-50 dark:bg-[var(--dark-bg)]"><p className="text-gray-400">No data available yet.</p></div>
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <div className="bg-gray-50 dark:bg-[var(--dark-bg)] min-h-screen">
+      <div className="bg-white dark:bg-[var(--dark-card)] border-b border-gray-200 dark:border-[var(--dark-border)]">
         <div className="max-w-7xl mx-auto px-4">
-          <HeroNumber stats={stats} trackingLabel={trackingLabel} />
+          <HeroNumber stats={displayStats} trackingLabel={trackingLabel} />
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <ChartEventsSwitcher
-          chartData={chartData}
-          events={allEvents}
+          filteredEvents={filtered}
+          allEvents={allEvents}
           chartType="area"
           countryFilter={countryFilter}
           setCountryFilter={setCountryFilter}
@@ -372,8 +446,8 @@ function ReportLayout({ allEvents, chartData, hasData, stats, trackingLabel }: H
         {/* Full table below */}
         <div className="mt-6">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              All Events {(countryFilter || industryFilter) && `(${filtered.length})`}
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-[var(--dark-muted)]">
+              All Events {isFiltered && `(${filtered.length})`}
             </h2>
             <Link href="/news" className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1">
               All Sources <ArrowRight className="h-3 w-3" />
@@ -382,7 +456,7 @@ function ReportLayout({ allEvents, chartData, hasData, stats, trackingLabel }: H
           <EventTable events={filtered} />
         </div>
 
-        <p className="text-center text-[10px] text-gray-400 dark:text-gray-500 py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-center text-[10px] text-gray-400 dark:text-[var(--dark-muted)] py-4 mt-4 border-t border-gray-200 dark:border-[var(--dark-border)]">
           Data estimated from public reporting · Not census data · <Link href="/methodology" className="underline text-blue-500">Methodology</Link>
         </p>
       </div>
@@ -405,15 +479,18 @@ function TwoColumnLayout({ allEvents, chartData, hasData, stats, trackingLabel }
     })
   }, [allEvents, countryFilter, industryFilter])
 
+  const isFiltered = countryFilter || industryFilter
+  const displayStats = useMemo(() => isFiltered ? buildStats(filtered, stats.lastUpdated) : stats, [isFiltered, filtered, stats])
+
   if (!hasData) {
-    return <div className="min-h-[60vh] flex items-center justify-center bg-gray-50 dark:bg-gray-900"><p className="text-gray-400">No data available yet.</p></div>
+    return <div className="min-h-[60vh] flex items-center justify-center bg-gray-50 dark:bg-[var(--dark-bg)]"><p className="text-gray-400">No data available yet.</p></div>
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <div className="bg-gray-50 dark:bg-[var(--dark-bg)] min-h-screen">
+      <div className="bg-white dark:bg-[var(--dark-card)] border-b border-gray-200 dark:border-[var(--dark-border)]">
         <div className="max-w-7xl mx-auto px-4">
-          <HeroNumber stats={stats} trackingLabel={trackingLabel} />
+          <HeroNumber stats={displayStats} trackingLabel={trackingLabel} />
         </div>
       </div>
 
@@ -422,8 +499,8 @@ function TwoColumnLayout({ allEvents, chartData, hasData, stats, trackingLabel }
           {/* Left Column - Chart + nav */}
           <div className="lg:col-span-2 space-y-4">
             <ChartEventsSwitcher
-              chartData={chartData}
-              events={allEvents}
+              filteredEvents={filtered}
+              allEvents={allEvents}
               chartType="line"
               countryFilter={countryFilter}
               setCountryFilter={setCountryFilter}
@@ -432,7 +509,7 @@ function TwoColumnLayout({ allEvents, chartData, hasData, stats, trackingLabel }
             />
             <div className="grid grid-cols-2 gap-2">
               {navItems.slice(0, 4).map(l => (
-                <Link key={l.href} href={l.href} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 text-center text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
+                <Link key={l.href} href={l.href} className="bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] p-3 text-center text-xs font-medium text-gray-600 dark:text-[var(--dark-text)] hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
                   {l.label}
                 </Link>
               ))}
@@ -442,8 +519,8 @@ function TwoColumnLayout({ allEvents, chartData, hasData, stats, trackingLabel }
           {/* Right Column - Table */}
           <div className="lg:col-span-3">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                Event Log {(countryFilter || industryFilter) && `(${filtered.length})`}
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-[var(--dark-muted)]">
+                Event Log {isFiltered && `(${filtered.length})`}
               </h2>
               <Link href="/news" className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1">
                 All Sources <ArrowRight className="h-3 w-3" />
@@ -453,7 +530,7 @@ function TwoColumnLayout({ allEvents, chartData, hasData, stats, trackingLabel }
           </div>
         </div>
 
-        <p className="text-center text-[10px] text-gray-400 dark:text-gray-500 py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-center text-[10px] text-gray-400 dark:text-[var(--dark-muted)] py-4 mt-4 border-t border-gray-200 dark:border-[var(--dark-border)]">
           Data from public reporting · <Link href="/methodology" className="underline text-blue-500">Methodology</Link>
         </p>
       </div>
@@ -476,41 +553,44 @@ function SidebarLayout({ allEvents, chartData, hasData, stats, trackingLabel }: 
     })
   }, [allEvents, countryFilter, industryFilter])
 
+  const isFiltered = countryFilter || industryFilter
+  const displayStats = useMemo(() => isFiltered ? buildStats(filtered, stats.lastUpdated) : stats, [isFiltered, filtered, stats])
+
   if (!hasData) {
-    return <div className="min-h-[60vh] flex items-center justify-center bg-gray-50 dark:bg-gray-900"><p className="text-gray-400">No data available yet.</p></div>
+    return <div className="min-h-[60vh] flex items-center justify-center bg-gray-50 dark:bg-[var(--dark-bg)]"><p className="text-gray-400">No data available yet.</p></div>
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="bg-gray-50 dark:bg-[var(--dark-bg)] min-h-screen">
       <div className="flex">
         {/* Sidebar */}
-        <aside className="hidden lg:block w-64 shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 min-h-[calc(100vh-56px)] sticky top-14">
+        <aside className="hidden lg:block w-64 shrink-0 bg-white dark:bg-[var(--dark-card)] border-r border-gray-200 dark:border-[var(--dark-border)] min-h-[calc(100vh-56px)] sticky top-14">
           <div className="p-4">
             <div className="mb-6 text-center">
-              <p className="text-[10px] uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500 mb-1">{trackingLabel}</p>
-              <div className="text-4xl font-bold tabular-nums text-gray-900 dark:text-gray-100">{fmt(stats.core)}</div>
-              <p className="text-[10px] text-gray-400 dark:text-gray-500">Core weighted</p>
+              <p className="text-[10px] uppercase tracking-[0.15em] text-gray-400 dark:text-[var(--dark-muted)] mb-1">{trackingLabel}</p>
+              <div className="text-4xl font-bold tabular-nums text-gray-900 dark:text-[var(--dark-text)]">{fmt(displayStats.core)}</div>
+              <p className="text-[10px] text-gray-400 dark:text-[var(--dark-muted)]">Core weighted</p>
             </div>
 
             <div className="space-y-3 mb-6">
               {[
-                { label: 'Conservative', value: stats.conservative, cls: 'text-green-700 dark:text-green-400' },
-                { label: 'Upper Bound', value: stats.upper, cls: 'text-red-600 dark:text-red-400' },
-                { label: 'Announced', value: stats.totalAnnounced, cls: 'text-gray-600 dark:text-gray-300' },
-                { label: 'Events', value: stats.eventCount, cls: 'text-gray-600 dark:text-gray-300' },
+                { label: 'Conservative', value: displayStats.conservative, cls: 'text-green-700 dark:text-green-400' },
+                { label: 'Upper Bound', value: displayStats.upper, cls: 'text-red-600 dark:text-red-400' },
+                { label: 'Announced', value: displayStats.totalAnnounced, cls: 'text-gray-600 dark:text-[var(--dark-text)]' },
+                { label: 'Events', value: displayStats.eventCount, cls: 'text-gray-600 dark:text-[var(--dark-text)]' },
               ].map(s => (
                 <div key={s.label} className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">{s.label}</span>
+                  <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-[var(--dark-muted)]">{s.label}</span>
                   <span className={`text-sm font-bold tabular-nums ${s.cls}`}>{typeof s.value === 'number' ? fmt(s.value) : s.value}</span>
                 </div>
               ))}
             </div>
 
-            <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Navigation</p>
+            <div className="border-t border-gray-100 dark:border-[var(--dark-border)] pt-4">
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-[var(--dark-muted)] mb-2">Navigation</p>
               <nav className="space-y-0.5">
                 {navItems.map(l => (
-                  <Link key={l.href} href={l.href} className="block px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-700 dark:hover:text-blue-400 rounded transition-colors">
+                  <Link key={l.href} href={l.href} className="block px-2 py-1.5 text-sm text-gray-600 dark:text-[var(--dark-text)] hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-700 dark:hover:text-blue-400 rounded transition-colors">
                     {l.label}
                   </Link>
                 ))}
@@ -518,7 +598,7 @@ function SidebarLayout({ allEvents, chartData, hasData, stats, trackingLabel }: 
             </div>
 
             {stats.lastUpdated && (
-              <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700 text-[10px] text-gray-400 dark:text-gray-500">
+              <div className="mt-6 pt-4 border-t border-gray-100 dark:border-[var(--dark-border)] text-[10px] text-gray-400 dark:text-[var(--dark-muted)]">
                 Updated {stats.lastUpdated.split('T')[0]}
               </div>
             )}
@@ -528,13 +608,13 @@ function SidebarLayout({ allEvents, chartData, hasData, stats, trackingLabel }: 
         {/* Main */}
         <main className="flex-1 min-w-0 p-4 lg:p-6">
           {/* Mobile hero */}
-          <div className="lg:hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded mb-4">
-            <HeroNumber stats={stats} trackingLabel={trackingLabel} />
+          <div className="lg:hidden bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] rounded mb-4">
+            <HeroNumber stats={displayStats} trackingLabel={trackingLabel} />
           </div>
 
           <ChartEventsSwitcher
-            chartData={chartData}
-            events={allEvents}
+            filteredEvents={filtered}
+            allEvents={allEvents}
             chartType="area"
             countryFilter={countryFilter}
             setCountryFilter={setCountryFilter}
@@ -544,8 +624,8 @@ function SidebarLayout({ allEvents, chartData, hasData, stats, trackingLabel }: 
 
           <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                All Events {(countryFilter || industryFilter) && `(${filtered.length})`}
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-[var(--dark-muted)]">
+                All Events {isFiltered && `(${filtered.length})`}
               </h2>
               <Link href="/news" className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1">
                 All Sources <ArrowRight className="h-3 w-3" />
@@ -574,15 +654,18 @@ function PanelLayout({ allEvents, chartData, hasData, stats, trackingLabel }: Ho
     })
   }, [allEvents, countryFilter, industryFilter])
 
+  const isFiltered = countryFilter || industryFilter
+  const displayStats = useMemo(() => isFiltered ? buildStats(filtered, stats.lastUpdated) : stats, [isFiltered, filtered, stats])
+
   if (!hasData) {
-    return <div className="min-h-[60vh] flex items-center justify-center bg-gray-50 dark:bg-gray-900"><p className="text-gray-400">No data available yet.</p></div>
+    return <div className="min-h-[60vh] flex items-center justify-center bg-gray-50 dark:bg-[var(--dark-bg)]"><p className="text-gray-400">No data available yet.</p></div>
   }
 
   return (
-    <div className="bg-gray-100 dark:bg-gray-900 min-h-screen">
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <div className="bg-gray-100 dark:bg-[var(--dark-bg)] min-h-screen">
+      <div className="bg-white dark:bg-[var(--dark-card)] border-b border-gray-200 dark:border-[var(--dark-border)]">
         <div className="max-w-7xl mx-auto px-4">
-          <HeroNumber stats={stats} trackingLabel={trackingLabel} />
+          <HeroNumber stats={displayStats} trackingLabel={trackingLabel} />
         </div>
       </div>
 
@@ -590,8 +673,8 @@ function PanelLayout({ allEvents, chartData, hasData, stats, trackingLabel }: Ho
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
           <div className="lg:col-span-2">
             <ChartEventsSwitcher
-              chartData={chartData}
-              events={allEvents}
+              filteredEvents={filtered}
+              allEvents={allEvents}
               chartType="bar"
               countryFilter={countryFilter}
               setCountryFilter={setCountryFilter}
@@ -602,8 +685,8 @@ function PanelLayout({ allEvents, chartData, hasData, stats, trackingLabel }: Ho
 
           <div className="space-y-3">
             {navItems.map(l => (
-              <Link key={l.href} href={l.href} className="block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{l.label}</span>
+              <Link key={l.href} href={l.href} className="block bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
+                <span className="text-sm font-medium text-gray-700 dark:text-[var(--dark-text)]">{l.label}</span>
                 <ArrowRight className="h-3 w-3 inline ml-2 text-gray-400" />
               </Link>
             ))}
@@ -612,8 +695,8 @@ function PanelLayout({ allEvents, chartData, hasData, stats, trackingLabel }: Ho
 
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Event Log {(countryFilter || industryFilter) && `(${filtered.length})`}
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-[var(--dark-muted)]">
+              Event Log {isFiltered && `(${filtered.length})`}
             </h2>
             <Link href="/news" className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1">
               All Sources <ArrowRight className="h-3 w-3" />
@@ -622,7 +705,7 @@ function PanelLayout({ allEvents, chartData, hasData, stats, trackingLabel }: Ho
           <EventTable events={filtered} />
         </div>
 
-        <p className="text-center text-[10px] text-gray-400 dark:text-gray-500 py-4 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-center text-[10px] text-gray-400 dark:text-[var(--dark-muted)] py-4 border-t border-gray-200 dark:border-[var(--dark-border)]">
           Public reporting data · Weighted attribution · <Link href="/methodology" className="underline text-blue-500">Methodology</Link>
         </p>
       </div>
