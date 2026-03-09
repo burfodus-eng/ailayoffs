@@ -273,6 +273,11 @@ function EventPopup({ event, onClose }: { event: EventData; onClose: () => void 
 function EventTable({ events, compact }: { events: EventData[]; compact?: boolean }) {
   const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null)
 
+  // Compact mode (two-column layout): fewer columns
+  const headers = compact
+    ? ['Date', 'Company', 'Attr', 'Core']
+    : ['Date', 'Company', 'Country', 'Industry', 'Attribution', 'Announced', 'Conservative', 'Core', 'Upper']
+
   return (
     <>
       {selectedEvent && <EventPopup event={selectedEvent} onClose={() => setSelectedEvent(null)} />}
@@ -280,8 +285,8 @@ function EventTable({ events, compact }: { events: EventData[]; compact?: boolea
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 dark:bg-[var(--dark-surface)] border-b border-gray-200 dark:border-[var(--dark-border)]">
-              {['Date', 'Company', 'Country', 'Industry', 'Attribution', 'Announced', 'Conservative', 'Core', 'Upper'].map((h, i) => (
-                <th key={h} className={`p-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-[var(--dark-muted)] ${i >= 5 ? 'text-right' : 'text-left'} ${compact && (i === 2 || i === 3) ? 'hidden lg:table-cell' : i === 2 ? 'hidden sm:table-cell' : i === 3 ? 'hidden md:table-cell' : ''}`}>
+              {headers.map((h, i) => (
+                <th key={h} className={`p-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-[var(--dark-muted)] ${compact ? (i >= 3 ? 'text-right' : 'text-left') : (i >= 5 ? 'text-right' : 'text-left')} ${!compact && i === 2 ? 'hidden sm:table-cell' : ''} ${!compact && i === 3 ? 'hidden md:table-cell' : ''}`}>
                   {h}
                 </th>
               ))}
@@ -294,17 +299,30 @@ function EventTable({ events, compact }: { events: EventData[]; compact?: boolea
                 className={`border-b border-gray-100 dark:border-[var(--dark-border)] hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors cursor-pointer ${i % 2 === 0 ? 'bg-white dark:bg-[var(--dark-card)]' : 'bg-gray-50/50 dark:bg-[var(--dark-surface)]/50'}`}
                 onClick={() => setSelectedEvent(event)}
               >
-                <td className="p-2 text-xs text-gray-400 whitespace-nowrap">{event.dateAnnounced ? new Date(event.dateAnnounced).toISOString().split('T')[0] : '—'}</td>
-                <td className="p-2 font-medium whitespace-nowrap text-gray-900 dark:text-[var(--dark-text)] hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                  {event.companyName || '—'}
-                </td>
-                <td className={`p-2 text-xs text-gray-500 dark:text-[var(--dark-muted)] ${compact ? 'hidden lg:table-cell' : 'hidden sm:table-cell'}`}>{event.country || '—'}</td>
-                <td className={`p-2 text-xs text-gray-500 dark:text-[var(--dark-muted)] ${compact ? 'hidden lg:table-cell' : 'hidden md:table-cell'}`}>{event.industry || '—'}</td>
-                <td className="p-2"><span className={`inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase border rounded ${catBadge(event.attributionCategory)}`}>{event.attributionCategory}</span></td>
-                <td className="p-2 text-right tabular-nums text-gray-500 dark:text-[var(--dark-muted)]">{event.jobsCutAnnounced?.toLocaleString() || '—'}</td>
-                <td className="p-2 text-right tabular-nums text-green-700 dark:text-green-400">{event.conservativeAiJobs.toLocaleString()}</td>
-                <td className="p-2 text-right tabular-nums font-bold text-amber-700 dark:text-amber-400">{event.weightedAiJobs.toLocaleString()}</td>
-                <td className="p-2 text-right tabular-nums text-red-600 dark:text-red-400">{event.upperAiJobs.toLocaleString()}</td>
+                {compact ? (
+                  <>
+                    <td className="p-1.5 text-[11px] text-gray-400 whitespace-nowrap">{event.dateAnnounced ? new Date(event.dateAnnounced).toISOString().split('T')[0].slice(2) : '—'}</td>
+                    <td className="p-1.5 text-[12px] font-medium whitespace-nowrap text-gray-900 dark:text-[var(--dark-text)] hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[140px]">
+                      {event.companyName || '—'}
+                    </td>
+                    <td className="p-1.5"><span className={`inline-block px-1 py-0.5 text-[9px] font-semibold uppercase border rounded ${catBadge(event.attributionCategory)}`}>{event.attributionCategory.slice(0, 3)}</span></td>
+                    <td className="p-1.5 text-right tabular-nums text-[12px] font-bold text-amber-700 dark:text-amber-400">{event.weightedAiJobs.toLocaleString()}</td>
+                  </>
+                ) : (
+                  <>
+                    <td className="p-2 text-xs text-gray-400 whitespace-nowrap">{event.dateAnnounced ? new Date(event.dateAnnounced).toISOString().split('T')[0] : '—'}</td>
+                    <td className="p-2 font-medium whitespace-nowrap text-gray-900 dark:text-[var(--dark-text)] hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                      {event.companyName || '—'}
+                    </td>
+                    <td className="p-2 text-xs text-gray-500 dark:text-[var(--dark-muted)] hidden sm:table-cell">{event.country || '—'}</td>
+                    <td className="p-2 text-xs text-gray-500 dark:text-[var(--dark-muted)] hidden md:table-cell">{event.industry || '—'}</td>
+                    <td className="p-2"><span className={`inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase border rounded ${catBadge(event.attributionCategory)}`}>{event.attributionCategory}</span></td>
+                    <td className="p-2 text-right tabular-nums text-gray-500 dark:text-[var(--dark-muted)]">{event.jobsCutAnnounced?.toLocaleString() || '—'}</td>
+                    <td className="p-2 text-right tabular-nums text-green-700 dark:text-green-400">{event.conservativeAiJobs.toLocaleString()}</td>
+                    <td className="p-2 text-right tabular-nums font-bold text-amber-700 dark:text-amber-400">{event.weightedAiJobs.toLocaleString()}</td>
+                    <td className="p-2 text-right tabular-nums text-red-600 dark:text-red-400">{event.upperAiJobs.toLocaleString()}</td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>
