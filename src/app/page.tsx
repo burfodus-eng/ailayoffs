@@ -1,65 +1,132 @@
-import Image from "next/image";
+import { prisma } from '@/lib/db'
+import { formatNumberFull } from '@/lib/utils'
+import { headers } from 'next/headers'
+import { getBrandFromHost } from '@/lib/domains'
+import { HomeClient } from '@/components/home-client'
 
-export default function Home() {
+export const dynamic = 'force-dynamic'
+
+async function getStats(focusType: string) {
+  const eventTypes = focusType === 'robot'
+    ? ['ROBOT_LAYOFF']
+    : focusType === 'both'
+    ? ['AI_LAYOFF', 'ROBOT_LAYOFF']
+    : ['AI_LAYOFF']
+
+  const result = await prisma.event.aggregate({
+    where: {
+      eventType: { in: eventTypes as any },
+      reviewStatus: { not: 'EXCLUDED' },
+      supersededByEventId: null,
+    },
+    _sum: {
+      conservativeAiJobs: true,
+      weightedAiJobs: true,
+      upperAiJobs: true,
+    },
+    _count: true,
+  })
+
+  const [reviewedCount, totalCount, lastEvent, recentEvents] = await Promise.all([
+    prisma.event.count({ where: { reviewStatus: 'REVIEWED', eventType: { in: eventTypes as any } } }),
+    prisma.event.count({ where: { reviewStatus: { not: 'EXCLUDED' }, eventType: { in: eventTypes as any } } }),
+    prisma.event.findFirst({ orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+    prisma.event.findMany({
+      where: { eventType: { in: eventTypes as any }, reviewStatus: { not: 'EXCLUDED' }, supersededByEventId: null },
+      orderBy: { dateAnnounced: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        companyName: true,
+        country: true,
+        dateAnnounced: true,
+        weightedAiJobs: true,
+        attributionCategory: true,
+        publicSummary: true,
+        reviewStatus: true,
+      },
+    }),
+  ])
+
+  return {
+    conservative: result._sum.conservativeAiJobs || 0,
+    core: result._sum.weightedAiJobs || 0,
+    upper: result._sum.upperAiJobs || 0,
+    eventCount: result._count,
+    reviewedPercent: totalCount > 0 ? Math.round((reviewedCount / totalCount) * 100) : 0,
+    lastUpdated: lastEvent?.createdAt?.toISOString() || null,
+    recentEvents,
+  }
+}
+
+export default async function HomePage() {
+  const headersList = await headers()
+  const host = headersList.get('host') || 'ailayoffs.com.au'
+  const brand = getBrandFromHost(host)
+  const stats = await getStats(brand.focusType)
+
+  const trackingLabel = brand.focusType === 'robot'
+    ? 'Robot & Automation-Attributed Jobs Lost'
+    : brand.focusType === 'both'
+    ? 'AI & Automation-Attributed Jobs Lost'
+    : 'AI-Attributed Jobs Lost Globally'
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div>
+      {/* Hero */}
+      <section className={`bg-gradient-to-b ${brand.heroGradient} py-16 sm:py-24`}>
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <p className="text-gray-400 text-sm uppercase tracking-widest mb-4">
+            Live Estimate &mdash; {trackingLabel}
+          </p>
+
+          {stats.core > 0 ? (
+            <>
+              <div className="text-6xl sm:text-8xl font-black text-white tabular-nums mb-2">
+                {formatNumberFull(stats.core)}
+              </div>
+              <p className="text-gray-400 text-sm mb-8">Core weighted estimate</p>
+
+              <div className="flex items-center justify-center gap-8 text-sm">
+                <div className="text-center">
+                  <div className="text-gray-500 text-xs uppercase tracking-wider">Conservative</div>
+                  <div className="text-gray-300 text-xl font-bold tabular-nums">{formatNumberFull(stats.conservative)}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-gray-500 text-xs uppercase tracking-wider">Upper Bound</div>
+                  <div className="text-gray-300 text-xl font-bold tabular-nums">{formatNumberFull(stats.upper)}</div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-4xl sm:text-5xl font-bold text-gray-500 mb-4">
+                Awaiting Data
+              </div>
+              <p className="text-gray-500 text-sm max-w-lg mx-auto">
+                The tracker is live but has not yet ingested any events.
+                Data will appear here as articles are discovered and classified.
+              </p>
+            </>
+          )}
+
+          <div className="mt-8 flex items-center justify-center gap-6 text-xs text-gray-500">
+            {stats.lastUpdated && (
+              <span>Last updated: {new Date(stats.lastUpdated).toLocaleDateString()}</span>
+            )}
+            <span>{stats.eventCount} events tracked</span>
+            {stats.eventCount > 0 && <span>{stats.reviewedPercent}% reviewed</span>}
+          </div>
+
+          <p className="mt-6 text-gray-600 text-xs max-w-md mx-auto">
+            This is a live estimate built from public reporting and weighted attribution analysis.
+            Numbers are ranges, not exact census counts.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </section>
+
+      {/* Recent Events */}
+      <HomeClient recentEvents={stats.recentEvents} hasData={stats.core > 0} />
     </div>
-  );
+  )
 }

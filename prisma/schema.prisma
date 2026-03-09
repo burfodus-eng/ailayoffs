@@ -1,14 +1,217 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum AttributionCategory {
+  EXPLICIT
+  STRONG
+  MODERATE
+  WEAK
+  FRINGE
+  NOT_RELEVANT
+}
+
+enum EventType {
+  AI_LAYOFF
+  ROBOT_LAYOFF
+  AI_JOB_CREATED
+  PRODUCTIVITY_GAIN
+}
+
+enum ReviewStatus {
+  PROVISIONAL
+  REVIEWED
+  DISPUTED
+  EXCLUDED
+}
+
+enum ReviewLevel {
+  AUTOMATED
+  DEEP_REVIEWED
+  ADMIN_VERIFIED
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  industry  String?
+  country   String?
+  logoUrl   String?
+  events    Event[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Source {
+  id        String    @id @default(cuid())
+  domain    String    @unique
+  name      String
+  type      String?
+  reliable  Boolean   @default(true)
+  articles  Article[]
+  createdAt DateTime  @default(now())
+}
+
+model Article {
+  id            String         @id @default(cuid())
+  title         String
+  url           String         @unique
+  sourceId      String?
+  source        Source?         @relation(fields: [sourceId], references: [id])
+  publishedAt   DateTime?
+  summary       String?
+  extractedText String?
+  paywalled     Boolean        @default(false)
+  language      String         @default("en")
+  country       String?
+  fetchedAt     DateTime       @default(now())
+  articleEvents ArticleEvent[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([publishedAt])
+  @@index([sourceId])
+}
+
+model Event {
+  id                         String              @id @default(cuid())
+  eventType                  EventType
+  companyId                  String?
+  company                    Company?            @relation(fields: [companyId], references: [id])
+  companyName                String?
+  country                    String?
+  affectedCountries          String[]
+  region                     String?
+  industry                   String?
+  dateAnnounced              DateTime?
+  jobsCutAnnounced           Int?
+  conservativeAiJobs         Int                 @default(0)
+  weightedAiJobs             Int                 @default(0)
+  upperAiJobs                Int                 @default(0)
+  attributionCategory        AttributionCategory @default(NOT_RELEVANT)
+  attributionWeight          Float               @default(0)
+  confidenceScore            Float               @default(0)
+  provisionalConfidenceScore Float?
+  reviewedConfidenceScore    Float?
+  reasoningSummary           String?
+  publicSummary              String?
+  evidenceSnippets           String[]
+  reviewStatus               ReviewStatus        @default(PROVISIONAL)
+  reviewLevel                ReviewLevel         @default(AUTOMATED)
+  needsReview                Boolean             @default(true)
+  needsDedupeReview          Boolean             @default(false)
+  needsWeightReview          Boolean             @default(false)
+  duplicateGroupId           String?
+  supersededByEventId        String?
+  classificationVersion      Int                 @default(1)
+  methodologyVersion         Int                 @default(1)
+  firstDetectedAt            DateTime            @default(now())
+  lastAutoUpdatedAt          DateTime?
+  lastReviewedAt             DateTime?
+  articleEvents              ArticleEvent[]
+  revisions                  EventRevision[]
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+
+  @@index([eventType])
+  @@index([companyId])
+  @@index([country])
+  @@index([dateAnnounced])
+  @@index([reviewStatus])
+  @@index([duplicateGroupId])
+  @@index([attributionCategory])
+}
+
+model ArticleEvent {
+  id        String  @id @default(cuid())
+  articleId String
+  article   Article @relation(fields: [articleId], references: [id])
+  eventId   String
+  event     Event   @relation(fields: [eventId], references: [id])
+  isPrimary Boolean @default(false)
+
+  @@unique([articleId, eventId])
+}
+
+model EventRevision {
+  id                   String               @id @default(cuid())
+  eventId              String
+  event                Event                @relation(fields: [eventId], references: [id])
+  previousCategory     AttributionCategory?
+  newCategory          AttributionCategory?
+  previousWeightedJobs Int?
+  newWeightedJobs      Int?
+  changeReason         String?
+  reviewedAt           DateTime             @default(now())
+  reviewBasis          String?
+
+  @@index([eventId])
+}
+
+model DailyAggregate {
+  id                     String    @id @default(cuid())
+  date                   DateTime
+  eventType              EventType
+  totalConservative      Int       @default(0)
+  totalCore              Int       @default(0)
+  totalUpper             Int       @default(0)
+  cumulativeConservative Int       @default(0)
+  cumulativeCore         Int       @default(0)
+  cumulativeUpper        Int       @default(0)
+  reviewedSharePercent   Float     @default(0)
+  provisionalSharePercent Float    @default(0)
+  eventCount             Int       @default(0)
+  recalculatedAt         DateTime  @default(now())
+
+  @@unique([date, eventType])
+  @@index([date])
+  @@index([eventType])
+}
+
+model ProductivityClaim {
+  id              String       @id @default(cuid())
+  companyName     String?
+  country         String?
+  industry        String?
+  claim           String
+  claimType       String?
+  estimatedImpact String?
+  assumptions     String?
+  confidence      Float        @default(0)
+  sourceUrl       String?
+  publishedAt     DateTime?
+  reviewStatus    ReviewStatus @default(PROVISIONAL)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model IngestionLog {
+  id            String    @id @default(cuid())
+  pipeline      String
+  status        String
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  articlesFound Int       @default(0)
+  eventsCreated Int       @default(0)
+  eventsUpdated Int       @default(0)
+  errors        String[]
+  details       String?
+}
+
+model WeightConfig {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  explicitWeight Float
+  strongWeight   Float
+  moderateWeight Float
+  weakWeight     Float
+  fringeWeight   Float
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
