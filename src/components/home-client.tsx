@@ -4,7 +4,8 @@ import { useState, useMemo } from 'react'
 import { useBrand } from '@/lib/brand-context'
 import type { BrandConfig } from '@/lib/domains'
 import Link from 'next/link'
-import { ArrowRight, BarChart3, Table2, ZoomIn, ZoomOut, X, Clock, MapPin, Briefcase } from 'lucide-react'
+import { ArrowRight, BarChart3, Table2, ZoomIn, ZoomOut, X, Clock, MapPin, Briefcase, Building2 } from 'lucide-react'
+import { getCompanyLogoUrl, getIndustryImageUrl } from '@/lib/company-images'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
   AreaChart, Area, BarChart, Bar, CartesianGrid,
@@ -229,17 +230,21 @@ function ChartWithZoom({ chartData, chartType }: { chartData: ChartPoint[]; char
 // Event preview popup
 function EventPopup({ event, onClose }: { event: EventData; onClose: () => void }) {
   const article = event.articleEvents[0]?.article
-  const logoUrl = article ? (() => { try { return `https://logo.clearbit.com/${new URL(article.url).hostname}?size=200` } catch { return '' } })() : ''
+  const logo = getCompanyLogoUrl(event.companyName)
+  const bg = getIndustryImageUrl(event.industry)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       <div className="relative bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        {logoUrl && (
-          <div className="h-20 bg-gray-50 dark:bg-[var(--dark-surface)] flex items-center justify-center border-b border-gray-100 dark:border-[var(--dark-border)] rounded-t-lg">
-            <img src={logoUrl} alt={event.companyName || ''} className="w-12 h-12 object-contain opacity-70" onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
-          </div>
-        )}
+        <div className="h-24 bg-gray-50 dark:bg-[var(--dark-surface)] flex items-center justify-center border-b border-gray-100 dark:border-[var(--dark-border)] rounded-t-lg relative overflow-hidden">
+          {bg && <img src={bg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />}
+          {logo ? (
+            <img src={logo} alt={event.companyName || ''} className="w-14 h-14 object-contain relative z-10" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+          ) : (
+            <Building2 className="h-10 w-10 text-gray-300 dark:text-gray-600 relative z-10" />
+          )}
+        </div>
         <div className="p-6">
           <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><X className="h-5 w-5" /></button>
           <div className="flex items-center gap-2 mb-3">
@@ -341,7 +346,7 @@ function HeroNumber({ stats, trackingLabel }: { stats: StatsData; trackingLabel:
         {fmt(stats.core)}
       </div>
       <p className="text-xs text-gray-400 dark:text-[var(--dark-muted)] mt-2">Core weighted estimate</p>
-      <div className="flex items-center justify-center gap-6 sm:gap-10 mt-6">
+      <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-4 sm:gap-10 mt-6 px-4 sm:px-0">
         {[
           { label: 'Conservative', value: stats.conservative, cls: 'text-green-700 dark:text-green-400' },
           { label: 'Upper Bound', value: stats.upper, cls: 'text-red-600 dark:text-red-400' },
@@ -350,7 +355,7 @@ function HeroNumber({ stats, trackingLabel }: { stats: StatsData; trackingLabel:
         ].map(s => (
           <div key={s.label} className="text-center">
             <div className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-[var(--dark-muted)]">{s.label}</div>
-            <div className={`text-xl font-bold tabular-nums ${s.cls}`}>{fmt(s.value)}</div>
+            <div className={`text-lg sm:text-xl font-bold tabular-nums ${s.cls}`}>{fmt(s.value)}</div>
           </div>
         ))}
       </div>

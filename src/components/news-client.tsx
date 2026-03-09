@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Filter, X, Clock, Building2, MapPin, Briefcase, ArrowRight } from 'lucide-react'
+import { getCompanyLogoUrl, getIndustryImageUrl } from '@/lib/company-images'
 
 interface ArticleData {
   title: string
@@ -29,13 +30,10 @@ interface EventData {
   articleEvents: { article: ArticleData; isPrimary: boolean }[]
 }
 
-function getLogoUrl(articleUrl: string): string {
-  try {
-    const domain = new URL(articleUrl).hostname
-    return `https://logo.clearbit.com/${domain}?size=200`
-  } catch {
-    return ''
-  }
+function getEventImage(event: EventData): { logo: string; bg: string } {
+  const logo = getCompanyLogoUrl(event.companyName)
+  const bg = getIndustryImageUrl(event.industry)
+  return { logo, bg }
 }
 
 function categoryStyle(cat: string) {
@@ -64,8 +62,8 @@ function eventTypeLabel(type: string) {
 
 // Popup preview modal
 function EventPopup({ event, onClose }: { event: EventData; onClose: () => void }) {
+  const { logo, bg } = getEventImage(event)
   const article = event.articleEvents.find(ae => ae.isPrimary)?.article || event.articleEvents[0]?.article
-  const logoUrl = article ? getLogoUrl(article.url) : ''
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -74,17 +72,14 @@ function EventPopup({ event, onClose }: { event: EventData; onClose: () => void 
         className="relative bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Logo header */}
-        {logoUrl && (
-          <div className="h-20 bg-gray-50 dark:bg-[var(--dark-surface)] flex items-center justify-center border-b border-gray-100 dark:border-[var(--dark-border)] rounded-t-lg">
-            <img
-              src={logoUrl}
-              alt={event.companyName || ''}
-              className="w-12 h-12 object-contain opacity-70"
-              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
-            />
-          </div>
-        )}
+        <div className="h-24 bg-gray-50 dark:bg-[var(--dark-surface)] flex items-center justify-center border-b border-gray-100 dark:border-[var(--dark-border)] rounded-t-lg relative overflow-hidden">
+          {bg && <img src={bg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />}
+          {logo ? (
+            <img src={logo} alt={event.companyName || ''} className="w-14 h-14 object-contain relative z-10" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+          ) : (
+            <Building2 className="h-10 w-10 text-gray-300 dark:text-gray-600 relative z-10" />
+          )}
+        </div>
 
         <div className="p-6">
           <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -260,22 +255,23 @@ export function NewsClient({ events, countries, industries }: { events: EventDat
 
 function FeaturedCard({ event, onPreview }: { event: EventData; onPreview: () => void }) {
   const article = event.articleEvents.find(ae => ae.isPrimary)?.article || event.articleEvents[0]?.article
-  const logoUrl = article ? getLogoUrl(article.url) : ''
+  const { logo, bg } = getEventImage(event)
 
   return (
     <div onClick={onPreview} className="block group cursor-pointer">
       <div className="border border-gray-200 dark:border-[var(--dark-border)] rounded-lg overflow-hidden bg-white dark:bg-[var(--dark-card)] hover:shadow-lg transition-shadow">
         <div className="flex flex-col md:flex-row">
           <div className="md:w-72 h-48 md:h-auto bg-gray-50 dark:bg-[var(--dark-surface)] flex items-center justify-center shrink-0 relative overflow-hidden">
-            {logoUrl ? (
+            {bg && <img src={bg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />}
+            {logo ? (
               <img
-                src={logoUrl}
+                src={logo}
                 alt={event.companyName || ''}
-                className="w-20 h-20 object-contain opacity-60 group-hover:opacity-80 transition-opacity"
+                className="w-20 h-20 object-contain opacity-60 group-hover:opacity-80 transition-opacity relative z-10"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
               />
             ) : (
-              <Building2 className="h-16 w-16 text-gray-200 dark:text-gray-600" />
+              <Building2 className="h-16 w-16 text-gray-200 dark:text-gray-600 relative z-10" />
             )}
             <div className="absolute top-3 left-3">
               <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded ${categoryStyle(event.attributionCategory)}`}>
@@ -325,21 +321,22 @@ function FeaturedCard({ event, onPreview }: { event: EventData; onPreview: () =>
 
 function StoryCard({ event, onPreview }: { event: EventData; onPreview: () => void }) {
   const article = event.articleEvents.find(ae => ae.isPrimary)?.article || event.articleEvents[0]?.article
-  const logoUrl = article ? getLogoUrl(article.url) : ''
+  const { logo, bg } = getEventImage(event)
 
   return (
     <div onClick={onPreview} className="block group cursor-pointer">
       <div className="border border-gray-200 dark:border-[var(--dark-border)] rounded-lg overflow-hidden bg-white dark:bg-[var(--dark-card)] hover:shadow-lg transition-shadow h-full flex flex-col">
         <div className="h-32 bg-gray-50 dark:bg-[var(--dark-surface)] flex items-center justify-center relative overflow-hidden">
-          {logoUrl ? (
+          {bg && <img src={bg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />}
+          {logo ? (
             <img
-              src={logoUrl}
+              src={logo}
               alt={event.companyName || ''}
-              className="w-14 h-14 object-contain opacity-50 group-hover:opacity-70 transition-opacity"
+              className="w-14 h-14 object-contain opacity-50 group-hover:opacity-70 transition-opacity relative z-10"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
             />
           ) : (
-            <Building2 className="h-10 w-10 text-gray-200 dark:text-gray-600" />
+            <Building2 className="h-10 w-10 text-gray-200 dark:text-gray-600 relative z-10" />
           )}
           <div className="absolute top-2 left-2 flex gap-1">
             <span className={`px-1.5 py-0.5 text-[9px] font-bold uppercase rounded ${categoryStyle(event.attributionCategory)}`}>
