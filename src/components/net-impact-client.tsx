@@ -85,17 +85,17 @@ export function NetImpactClient({
           <div className="border rounded-lg p-4 bg-card mb-6">
             <h2 className="font-bold text-sm mb-4">Monthly Breakdown</h2>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData.map(d => ({ ...d, monthLabel: formatMonth(d.month) }))}>
+              <BarChart data={chartData.map(d => ({ ...d, lostNeg: -d.lost, monthLabel: formatMonth(d.month) }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke={brand.cardBorder} />
                 <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} stroke={brand.bodyText} />
-                <YAxis tick={{ fontSize: 11 }} stroke={brand.bodyText} />
+                <YAxis tick={{ fontSize: 11 }} stroke={brand.bodyText} tickFormatter={(v: number) => Math.abs(v).toLocaleString()} />
                 <Tooltip
                   contentStyle={{ backgroundColor: brand.cardBg, border: `1px solid ${brand.cardBorder}`, fontSize: 12 }}
-                  formatter={(v: any, n: any) => [Number(v).toLocaleString(), String(n) === 'lost' ? 'Jobs Lost' : String(n) === 'created' ? 'Jobs Created' : 'Net']}
+                  formatter={(v: any, n: any) => [Math.abs(Number(v)).toLocaleString(), String(n) === 'lostNeg' ? 'Jobs Lost' : String(n) === 'created' ? 'Jobs Created' : 'Net']}
                 />
                 <Legend />
-                <ReferenceLine y={0} stroke={brand.bodyText} strokeDasharray="3 3" />
-                <Bar dataKey="lost" name="Jobs Lost" fill="#ef4444" radius={[2, 2, 0, 0]} />
+                <ReferenceLine y={0} stroke={brand.bodyText} strokeWidth={2} />
+                <Bar dataKey="lostNeg" name="Jobs Lost" fill="#ef4444" radius={[0, 0, 2, 2]} />
                 <Bar dataKey="created" name="Jobs Created" fill="#22c55e" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -105,20 +105,20 @@ export function NetImpactClient({
           <div className="border rounded-lg p-4 bg-card">
             <h2 className="font-bold text-sm mb-4">Cumulative Trend</h2>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={cumulativeData.map(d => ({ ...d, monthLabel: formatMonth(d.month) }))}>
+              <LineChart data={cumulativeData.map(d => ({ ...d, cumLostNeg: -d.cumLost, monthLabel: formatMonth(d.month) }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke={brand.cardBorder} />
                 <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} stroke={brand.bodyText} />
-                <YAxis tick={{ fontSize: 11 }} stroke={brand.bodyText} />
+                <YAxis tick={{ fontSize: 11 }} stroke={brand.bodyText} tickFormatter={(v: number) => Math.abs(v).toLocaleString()} />
                 <Tooltip
                   contentStyle={{ backgroundColor: brand.cardBg, border: `1px solid ${brand.cardBorder}`, fontSize: 12 }}
                   formatter={(v: any, n: any) => {
-                    const labels: Record<string, string> = { cumLost: 'Total Lost', cumCreated: 'Total Created', cumNet: 'Net Impact' }
-                    return [Number(v).toLocaleString(), labels[String(n)] || String(n)]
+                    const labels: Record<string, string> = { cumLostNeg: 'Total Lost', cumCreated: 'Total Created', cumNet: 'Net Impact' }
+                    return [Math.abs(Number(v)).toLocaleString(), labels[String(n)] || String(n)]
                   }}
                 />
                 <Legend />
-                <ReferenceLine y={0} stroke={brand.bodyText} strokeDasharray="3 3" />
-                <Line type="monotone" dataKey="cumLost" name="Total Lost" stroke="#ef4444" strokeWidth={2} dot={false} />
+                <ReferenceLine y={0} stroke={brand.bodyText} strokeWidth={2} />
+                <Line type="monotone" dataKey="cumLostNeg" name="Total Lost" stroke="#ef4444" strokeWidth={2} dot={false} />
                 <Line type="monotone" dataKey="cumCreated" name="Total Created" stroke="#22c55e" strokeWidth={2} dot={false} />
                 <Line type="monotone" dataKey="cumNet" name="Net Impact" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" dot={false} />
               </LineChart>
