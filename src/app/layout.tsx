@@ -4,6 +4,7 @@ import './globals.css'
 import { headers } from 'next/headers'
 import { getBrandFromHost } from '@/lib/domains'
 import { BrandProvider } from '@/lib/brand-context'
+import { ThemeProvider } from '@/lib/theme-context'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 
@@ -34,14 +35,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const brand = getBrandFromHost(host)
 
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body className={inter.className}>
         <BrandProvider brand={brand}>
-          <div className="min-h-screen flex flex-col">
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
+          <ThemeProvider>
+            <div className="min-h-screen flex flex-col">
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </div>
+          </ThemeProvider>
         </BrandProvider>
       </body>
     </html>

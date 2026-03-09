@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useBrand } from '@/lib/brand-context'
-import { Activity, Menu, X } from 'lucide-react'
+import { Activity, Menu, Moon, Sun, X } from 'lucide-react'
+import { useTheme } from '@/lib/theme-context'
 import { useState } from 'react'
 
 const navLinks = [
@@ -17,6 +18,7 @@ const navLinks = [
 
 export function Header() {
   const brand = useBrand()
+  const { theme, toggle } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
@@ -40,12 +42,18 @@ export function Header() {
             ))}
           </nav>
 
+          <div className="flex items-center gap-2">
+            <button onClick={toggle} className="text-gray-300 hover:text-white p-1">
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+
           <button
             className="md:hidden text-gray-300 hover:text-white"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
+          </div>
         </div>
 
         {mobileOpen && (
