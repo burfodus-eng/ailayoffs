@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/db'
-import { formatNumberFull } from '@/lib/utils'
 import { headers } from 'next/headers'
 import { getBrandFromHost } from '@/lib/domains'
 import { HomeClient } from '@/components/home-client'
@@ -57,7 +56,6 @@ async function getStats(focusType: string) {
     }),
   ])
 
-  // Build cumulative chart data from events sorted by date
   const sortedEvents = [...allEvents]
     .filter(e => e.dateAnnounced)
     .sort((a, b) => new Date(a.dateAnnounced!).getTime() - new Date(b.dateAnnounced!).getTime())
@@ -102,62 +100,20 @@ export default async function HomePage() {
     : 'AI-ATTRIBUTED JOBS LOST GLOBALLY'
 
   return (
-    <div>
-      {/* Hero - always dark */}
-      <section className="bg-slate-950 border-b border-slate-800 py-10 sm:py-14">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-6">
-            <p className="text-slate-500 text-xs font-mono uppercase tracking-[0.2em] mb-3">
-              LIVE ESTIMATE // {trackingLabel}
-            </p>
-
-            {stats.core > 0 ? (
-              <>
-                <div className="text-5xl sm:text-7xl font-black text-white font-mono tabular-nums tracking-tight">
-                  {formatNumberFull(stats.core)}
-                </div>
-                <p className="text-slate-500 text-xs font-mono mt-1">CORE WEIGHTED ESTIMATE</p>
-              </>
-            ) : (
-              <div className="text-3xl font-mono text-slate-600">NO DATA</div>
-            )}
-          </div>
-
-          {stats.core > 0 && (
-            <div className="grid grid-cols-4 gap-px bg-slate-800 border border-slate-800 max-w-2xl mx-auto">
-              <div className="bg-slate-900 p-3 text-center">
-                <div className="text-slate-500 text-[10px] font-mono uppercase">Conservative</div>
-                <div className="text-slate-300 text-lg font-mono font-bold tabular-nums">{formatNumberFull(stats.conservative)}</div>
-              </div>
-              <div className="bg-slate-900 p-3 text-center">
-                <div className="text-slate-500 text-[10px] font-mono uppercase">Core</div>
-                <div className="text-white text-lg font-mono font-bold tabular-nums">{formatNumberFull(stats.core)}</div>
-              </div>
-              <div className="bg-slate-900 p-3 text-center">
-                <div className="text-slate-500 text-[10px] font-mono uppercase">Upper Bound</div>
-                <div className="text-slate-300 text-lg font-mono font-bold tabular-nums">{formatNumberFull(stats.upper)}</div>
-              </div>
-              <div className="bg-slate-900 p-3 text-center">
-                <div className="text-slate-500 text-[10px] font-mono uppercase">Total Announced</div>
-                <div className="text-slate-400 text-lg font-mono font-bold tabular-nums">{formatNumberFull(stats.totalAnnounced)}</div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center justify-center gap-4 mt-4 text-[10px] font-mono text-slate-600 uppercase">
-            {stats.lastUpdated && <span>Updated: {new Date(stats.lastUpdated).toISOString().split('T')[0]}</span>}
-            <span>{stats.eventCount} events</span>
-            <span>{stats.reviewedPercent}% reviewed</span>
-            <span className="text-green-700">LIVE</span>
-          </div>
-        </div>
-      </section>
-
-      <HomeClient
-        allEvents={stats.allEvents}
-        chartData={stats.chartData}
-        hasData={stats.core > 0}
-      />
-    </div>
+    <HomeClient
+      allEvents={stats.allEvents}
+      chartData={stats.chartData}
+      hasData={stats.core > 0}
+      stats={{
+        conservative: stats.conservative,
+        core: stats.core,
+        upper: stats.upper,
+        totalAnnounced: stats.totalAnnounced,
+        eventCount: stats.eventCount,
+        reviewedPercent: stats.reviewedPercent,
+        lastUpdated: stats.lastUpdated,
+      }}
+      trackingLabel={trackingLabel}
+    />
   )
 }
