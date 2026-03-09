@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useBrand } from '@/lib/brand-context'
-import type { BrandConfig } from '@/lib/domains'
+import type { BrandConfig, BrandKey } from '@/lib/domains'
 import Link from 'next/link'
 import { ArrowRight, BarChart3, Table2, ZoomIn, ZoomOut, X, Clock, MapPin, Briefcase, Building2 } from 'lucide-react'
 import { getCompanyLogoUrl, getIndustryImageUrl } from '@/lib/company-images'
@@ -103,14 +103,38 @@ function catBadge(cat: string) {
   }
 }
 
-const navItems = [
-  { href: '/news', label: 'News & Sources' },
-  { href: '/net-impact', label: 'Net Impact' },
-  { href: '/jobs-created', label: 'Jobs Created' },
-  { href: '/robots', label: 'Robot Tracker' },
-  { href: '/job-security', label: 'Job Security' },
-  { href: '/methodology', label: 'Methodology' },
-]
+const brandNavItems: Record<BrandKey, { href: string; label: string }[]> = {
+  ailayoffs: [
+    { href: '/news', label: 'Latest Announcements' },
+    { href: '/digest', label: 'Monthly Digest' },
+    { href: '/net-impact', label: 'Net Impact' },
+    { href: '/jobs-created', label: 'Jobs Created' },
+    { href: '/robots', label: 'Robot Tracker' },
+    { href: '/methodology', label: 'Methodology' },
+  ],
+  aicuts: [
+    { href: '/news', label: 'Breaking Cuts' },
+    { href: '/digest', label: 'Weekly Roundup' },
+    { href: '/net-impact', label: 'Net Impact' },
+    { href: '/jobs-created', label: 'Jobs Created' },
+    { href: '/methodology', label: 'Methodology' },
+  ],
+  ailayoffwatch: [
+    { href: '/news', label: 'Sources & Evidence' },
+    { href: '/digest', label: 'Research Summaries' },
+    { href: '/net-impact', label: 'Net Impact' },
+    { href: '/jobs-created', label: 'Jobs Created' },
+    { href: '/robots', label: 'Automation Tracker' },
+    { href: '/methodology', label: 'Methodology & Scoring' },
+  ],
+  robotlayoffs: [
+    { href: '/news', label: 'Automation News' },
+    { href: '/digest', label: 'Monthly Report' },
+    { href: '/robots', label: 'Robot Tracker' },
+    { href: '/net-impact', label: 'Net Impact' },
+    { href: '/methodology', label: 'Methodology' },
+  ],
+}
 
 // ═══════════════════════════════════════════════════════════════
 // SHARED COMPONENTS
@@ -339,13 +363,14 @@ function EventTable({ events, compact }: { events: EventData[]; compact?: boolea
 
 // Big number hero — shared across all layouts
 function HeroNumber({ stats, trackingLabel }: { stats: StatsData; trackingLabel: string }) {
+  const brand = useBrand()
   return (
     <div className="text-center py-8">
       <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 dark:text-[var(--dark-muted)] mb-2">{trackingLabel}</p>
       <div className="text-6xl sm:text-7xl md:text-8xl font-bold tabular-nums text-gray-900 dark:text-[var(--dark-text)]">
         {fmt(stats.core)}
       </div>
-      <p className="text-xs text-gray-400 dark:text-[var(--dark-muted)] mt-2">Core weighted estimate</p>
+      <p className="text-xs text-gray-400 dark:text-[var(--dark-muted)] mt-2">{brand.heroSubheading}</p>
       <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-4 sm:gap-10 mt-6 px-4 sm:px-0">
         {[
           { label: 'Conservative', value: stats.conservative, cls: 'text-green-700 dark:text-green-400' },
@@ -491,6 +516,7 @@ function ReportLayout({ allEvents, chartData, hasData, stats, trackingLabel }: H
 // LAYOUT 2: TWO-COLUMN (aicuts)
 // ═══════════════════════════════════════════════════════════════
 function TwoColumnLayout({ allEvents, chartData, hasData, stats, trackingLabel }: HomeClientProps) {
+  const navItems = useNavItems()
   const [countryFilter, setCountryFilter] = useState('')
   const [industryFilter, setIndustryFilter] = useState('')
 
@@ -565,6 +591,7 @@ function TwoColumnLayout({ allEvents, chartData, hasData, stats, trackingLabel }
 // LAYOUT 3: SIDEBAR NAV (ailayoffwatch)
 // ═══════════════════════════════════════════════════════════════
 function SidebarLayout({ allEvents, chartData, hasData, stats, trackingLabel }: HomeClientProps) {
+  const navItems = useNavItems()
   const [countryFilter, setCountryFilter] = useState('')
   const [industryFilter, setIndustryFilter] = useState('')
 
@@ -666,6 +693,7 @@ function SidebarLayout({ allEvents, chartData, hasData, stats, trackingLabel }: 
 // LAYOUT 4: PANEL (robotlayoffs)
 // ═══════════════════════════════════════════════════════════════
 function PanelLayout({ allEvents, chartData, hasData, stats, trackingLabel }: HomeClientProps) {
+  const navItems = useNavItems()
   const [countryFilter, setCountryFilter] = useState('')
   const [industryFilter, setIndustryFilter] = useState('')
 
@@ -739,6 +767,11 @@ function PanelLayout({ allEvents, chartData, hasData, stats, trackingLabel }: Ho
 // ═══════════════════════════════════════════════════════════════
 // MAIN EXPORT
 // ═══════════════════════════════════════════════════════════════
+function useNavItems() {
+  const brand = useBrand()
+  return brandNavItems[brand.key] || brandNavItems.ailayoffs
+}
+
 export function HomeClient(props: HomeClientProps) {
   const brand = useBrand()
 

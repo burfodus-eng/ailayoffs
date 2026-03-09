@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import { prisma } from '@/lib/db'
+import { normalizeIndustry } from '@/lib/domains'
 import { NewsClient } from '@/components/news-client'
 
 export const metadata: Metadata = { title: 'News & Sources' }
@@ -32,11 +33,14 @@ export default async function NewsPage() {
     }),
   ])
 
+  const normalizedEvents = events.map(e => ({ ...e, industry: normalizeIndustry(e.industry) }))
+  const normalizedIndustries = [...new Set(normalizedEvents.map(e => e.industry).filter(Boolean))].sort() as string[]
+
   return (
     <NewsClient
-      events={JSON.parse(JSON.stringify(events)) as any[]}
+      events={JSON.parse(JSON.stringify(normalizedEvents)) as any[]}
       countries={countries.map(c => c.country!).filter(Boolean)}
-      industries={industries.map(i => i.industry!).filter(Boolean)}
+      industries={normalizedIndustries}
     />
   )
 }

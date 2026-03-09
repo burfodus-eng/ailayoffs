@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { headers } from 'next/headers'
-import { getBrandFromHost } from '@/lib/domains'
+import { getBrandFromHost, normalizeIndustry } from '@/lib/domains'
 import { HomeClient } from '@/components/home-client'
 
 export const dynamic = 'force-dynamic'
@@ -82,7 +82,7 @@ async function getStats(focusType: string) {
     eventCount: result._count,
     reviewedPercent: totalCount > 0 ? Math.round((reviewedCount / totalCount) * 100) : 0,
     lastUpdated: lastEvent?.createdAt?.toISOString() || null,
-    allEvents: JSON.parse(JSON.stringify(allEvents)),
+    allEvents: JSON.parse(JSON.stringify(allEvents.map(e => ({ ...e, industry: normalizeIndustry(e.industry) })))),
     chartData,
   }
 }
@@ -93,11 +93,7 @@ export default async function HomePage() {
   const brand = getBrandFromHost(host)
   const stats = await getStats(brand.focusType)
 
-  const trackingLabel = brand.focusType === 'robot'
-    ? 'ROBOT & AUTOMATION-ATTRIBUTED JOBS LOST'
-    : brand.focusType === 'both'
-    ? 'AI & AUTOMATION-ATTRIBUTED JOBS LOST'
-    : 'AI-ATTRIBUTED JOBS LOST GLOBALLY'
+  const trackingLabel = brand.heroHeading.toUpperCase()
 
   return (
     <HomeClient

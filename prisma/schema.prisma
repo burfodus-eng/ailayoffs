@@ -203,6 +203,33 @@ model IngestionLog {
   details       String?
 }
 
+model BrandArticle {
+  id              String   @id @default(cuid())
+  brand           String   // ailayoffs | aicuts | ailayoffwatch | robotlayoffs
+  slug            String
+  title           String
+  summary         String
+  body            String   // markdown content
+  coverImageUrl   String?
+  socialTitle     String?  // short title for social posts
+  socialSummary   String?  // excerpt for Facebook/Instagram/X
+  socialImageUrl  String?  // OG image / social card
+  periodStart     DateTime? // e.g. start of month for digest articles
+  periodEnd       DateTime? // e.g. end of month
+  articleType     String   @default("digest") // digest | analysis | roundup
+  published       Boolean  @default(false)
+  publishedAt     DateTime?
+  authorName      String   @default("Editorial")
+  metaTitle       String?
+  metaDescription String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([brand, slug])
+  @@index([brand, published])
+  @@index([publishedAt])
+}
+
 model WeightConfig {
   id             String   @id @default(cuid())
   name           String   @unique

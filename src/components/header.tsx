@@ -6,22 +6,57 @@ import { Activity, Menu, Moon, Sun, X } from 'lucide-react'
 import { useTheme } from '@/lib/theme-context'
 import { useState } from 'react'
 
-const navLinks = [
+import type { BrandKey } from '@/lib/domains'
+
+const baseNavLinks = [
   { href: '/', label: 'Tracker' },
   { href: '/news', label: 'News & Sources' },
+  { href: '/digest', label: 'Digest' },
   { href: '/net-impact', label: 'Net Impact' },
   { href: '/jobs-created', label: 'Jobs Created' },
-  { href: '/productivity', label: 'Productivity' },
   { href: '/robots', label: 'Robot Tracker' },
-  { href: '/job-security', label: 'Job Security' },
   { href: '/methodology', label: 'Methodology' },
 ]
+
+// Brand-specific nav emphasis — reorder/relabel for each brand
+const brandNavOverrides: Partial<Record<BrandKey, { href: string; label: string }[]>> = {
+  aicuts: [
+    { href: '/', label: 'Tracker' },
+    { href: '/news', label: 'Breaking' },
+    { href: '/digest', label: 'Roundup' },
+    { href: '/net-impact', label: 'Net Impact' },
+    { href: '/jobs-created', label: 'Jobs Created' },
+    { href: '/methodology', label: 'Methodology' },
+  ],
+  ailayoffwatch: [
+    { href: '/', label: 'Tracker' },
+    { href: '/news', label: 'Sources' },
+    { href: '/digest', label: 'Research' },
+    { href: '/net-impact', label: 'Net Impact' },
+    { href: '/jobs-created', label: 'Jobs Created' },
+    { href: '/robots', label: 'Automation' },
+    { href: '/methodology', label: 'Methodology' },
+  ],
+  robotlayoffs: [
+    { href: '/', label: 'Tracker' },
+    { href: '/news', label: 'News' },
+    { href: '/digest', label: 'Reports' },
+    { href: '/robots', label: 'Robot Tracker' },
+    { href: '/net-impact', label: 'Net Impact' },
+    { href: '/methodology', label: 'Methodology' },
+  ],
+}
+
+function getNavLinks(brandKey: BrandKey) {
+  return brandNavOverrides[brandKey] || baseNavLinks
+}
 
 export function Header() {
   const brand = useBrand()
   const { theme, toggle } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  const navLinks = getNavLinks(brand.key)
   const darkHeader = 'dark:bg-[var(--dark-header)] dark:border-[var(--dark-border)]'
   const darkText = 'dark:text-[var(--dark-text)]'
   const darkMuted = 'dark:text-[var(--dark-muted)]'
