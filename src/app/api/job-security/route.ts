@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
-  const { jobTitle, industry, country } = await request.json()
+  const { jobTitle, industry, country, tasks, experience, education } = await request.json()
 
   if (!jobTitle) {
     return NextResponse.json({ error: 'Job title required' }, { status: 400 })
@@ -35,6 +35,9 @@ export async function POST(request: NextRequest) {
 - adjacentRoles (array of 2-3 safer adjacent roles)
 
 Job: ${jobTitle}
+Tasks: ${tasks?.join(', ') || 'not specified'}
+Experience: ${experience || 'not specified'}
+Education: ${education || 'not specified'}
 ${industry ? `Industry: ${industry}` : ''}
 ${country ? `Country: ${country}` : ''}
 
@@ -64,6 +67,9 @@ Return ONLY valid JSON, no markdown.`
 - adjacentRoles (array of 2-3 safer adjacent roles)
 
 Job: ${jobTitle}
+Tasks: ${tasks?.join(', ') || 'not specified'}
+Experience: ${experience || 'not specified'}
+Education: ${education || 'not specified'}
 ${industry ? `Industry: ${industry}` : ''}
 ${country ? `Country: ${country}` : ''}
 
