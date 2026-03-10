@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
 import { headers } from 'next/headers'
 import { getBrandFromHost } from '@/lib/domains'
@@ -117,6 +118,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <OrganizationJsonLd name={brand.name} url={`https://${brand.domain}`} description={brand.description} />
       </head>
       <body className={inter.className}>
+        {process.env.NEXT_PUBLIC_UMAMI_URL && process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
+          <Script
+            src={`${process.env.NEXT_PUBLIC_UMAMI_URL}/script.js`}
+            data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+            strategy="afterInteractive"
+          />
+        )}
         <BrandProvider brand={brand}>
           <ThemeProvider>
             <div className="min-h-screen flex flex-col">
