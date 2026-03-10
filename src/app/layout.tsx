@@ -118,13 +118,31 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <OrganizationJsonLd name={brand.name} url={`https://${brand.domain}`} description={brand.description} />
       </head>
       <body className={inter.className}>
-        {process.env.NEXT_PUBLIC_UMAMI_URL && process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
-          <Script
-            src={`${process.env.NEXT_PUBLIC_UMAMI_URL}/script.js`}
-            data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
-            strategy="afterInteractive"
-          />
-        )}
+        <Script
+          id="umami-analytics"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{ __html: `
+            (function(){
+              var ids = {
+                'ailayoffs.com.au': '926a73bd-e2d9-4413-9949-32a638889802',
+                'aicuts.com.au': '8506d74b-abab-4439-a375-78373368b4a1',
+                'ailayoffwatch.com': 'f17098f0-7925-4678-b37c-a078d9ab2ca7',
+                'ailayoffwatch.com.au': '9e644b12-d780-45c3-91ad-62786cd2d461',
+                'robotlayoffs.com': '7089fed7-475d-429e-b753-5912c96a9d0a',
+                'robotlayoffs.com.au': 'cb93b879-8cf4-4e83-83ff-392dca006059'
+              };
+              var host = window.location.hostname;
+              var id = ids[host];
+              if (id) {
+                var s = document.createElement('script');
+                s.defer = true;
+                s.src = 'https://umami-production-845c.up.railway.app/script.js';
+                s.setAttribute('data-website-id', id);
+                document.head.appendChild(s);
+              }
+            })();
+          `}}
+        />
         <BrandProvider brand={brand}>
           <ThemeProvider>
             <div className="min-h-screen flex flex-col">
