@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { headers } from 'next/headers'
@@ -7,6 +7,7 @@ import { BrandProvider } from '@/lib/brand-context'
 import { ThemeProvider } from '@/lib/theme-context'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
+import { OrganizationJsonLd } from '@/components/json-ld'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -54,21 +55,49 @@ const darkPalettes: Record<string, Record<string, string>> = {
   },
 }
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers()
   const host = headersList.get('host') || 'ailayoffs.com.au'
   const brand = getBrandFromHost(host)
+  const origin = `https://${brand.domain}`
 
   return {
+    metadataBase: new URL(origin),
     title: {
       default: `${brand.name} — ${brand.tagline}`,
       template: `%s | ${brand.name}`,
     },
     description: brand.description,
+    alternates: {
+      canonical: '/',
+    },
     openGraph: {
       title: `${brand.name} — ${brand.tagline}`,
       description: brand.description,
       type: 'website',
+      siteName: brand.name,
+      url: origin,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${brand.name} — ${brand.tagline}`,
+      description: brand.description,
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
     },
   }
 }
@@ -85,6 +114,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <head>
         <style dangerouslySetInnerHTML={{ __html: `:root {\n  ${cssVars};\n}` }} />
+        <OrganizationJsonLd name={brand.name} url={`https://${brand.domain}`} description={brand.description} />
       </head>
       <body className={inter.className}>
         <BrandProvider brand={brand}>

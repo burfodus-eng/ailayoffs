@@ -5,10 +5,11 @@ import { useBrand } from '@/lib/brand-context'
 import type { BrandConfig, BrandKey } from '@/lib/domains'
 import Link from 'next/link'
 import { ArrowRight, BarChart3, Table2, ZoomIn, ZoomOut, X, Clock, MapPin, Briefcase, Building2 } from 'lucide-react'
+import { LiveCounter } from './live-counter'
 import { getCompanyLogoUrl, getIndustryImageUrl } from '@/lib/company-images'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
-  AreaChart, Area, BarChart, Bar, CartesianGrid,
+  AreaChart, Area, BarChart, Bar, CartesianGrid, ScatterChart, Scatter, Cell,
 } from 'recharts'
 
 interface EventData {
@@ -364,12 +365,15 @@ function EventTable({ events, compact }: { events: EventData[]; compact?: boolea
 // Big number hero — shared across all layouts
 function HeroNumber({ stats, trackingLabel }: { stats: StatsData; trackingLabel: string }) {
   const brand = useBrand()
+  const counterType = brand.focusType === 'robot' ? 'robot_layoff' : brand.focusType === 'both' ? 'both' : 'ai_layoff'
   return (
     <div className="text-center py-8">
       <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 dark:text-[var(--dark-muted)] mb-2">{trackingLabel}</p>
-      <div className="text-6xl sm:text-7xl md:text-8xl font-bold tabular-nums text-gray-900 dark:text-[var(--dark-text)]">
-        {fmt(stats.core)}
-      </div>
+      <LiveCounter
+        counterType={counterType}
+        staticValue={stats.core}
+        lastUpdated={stats.lastUpdated}
+      />
       <p className="text-xs text-gray-400 dark:text-[var(--dark-muted)] mt-2">{brand.heroSubheading}</p>
       <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-4 sm:gap-10 mt-6 px-4 sm:px-0">
         {[
@@ -388,6 +392,98 @@ function HeroNumber({ stats, trackingLabel }: { stats: StatsData; trackingLabel:
         {stats.lastUpdated && <>Updated {stats.lastUpdated.split('T')[0]}</>}
       </div>
     </div>
+  )
+}
+
+// Event timeline chart — individual events plotted over time
+function EventTimelineChart({ events }: { events: EventData[] }) {
+  const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null)
+
+  const data = useMemo(() => {
+    return events
+      .filter(e => e.dateAnnounced && e.weightedAiJobs > 0)
+      .map(e => ({
+        date: new Date(e.dateAnnounced!).getTime(),
+        dateStr: new Date(e.dateAnnounced!).toISOString().split('T')[0],
+        core: e.weightedAiJobs,
+        company: e.companyName || 'Unknown',
+        category: e.attributionCategory,
+        event: e,
+      }))
+      .sort((a, b) => a.date - b.date)
+  }, [events])
+
+  const catColor = (cat: string) => {
+    switch (cat) {
+      case 'EXPLICIT': return '#ef4444'
+      case 'STRONG': return '#f97316'
+      case 'MODERATE': return '#eab308'
+      case 'WEAK': return '#9ca3af'
+      default: return '#d1d5db'
+    }
+  }
+
+  const formatDate = (ts: number) => {
+    const d = new Date(ts)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  }
+
+  return (
+    <>
+      {selectedEvent && <EventPopup event={selectedEvent} onClose={() => setSelectedEvent(null)} />}
+      <div style={{ height: 350 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis
+              dataKey="date"
+              type="number"
+              domain={['dataMin', 'dataMax']}
+              tickFormatter={formatDate}
+              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              tickLine={false}
+              axisLine={{ stroke: '#e5e7eb' }}
+              name="Date"
+            />
+            <YAxis
+              dataKey="core"
+              type="number"
+              tickFormatter={fmtAxis}
+              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              tickLine={false}
+              axisLine={{ stroke: '#e5e7eb' }}
+              width={50}
+              name="Jobs"
+            />
+            <Tooltip
+              contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', fontSize: 12, color: '#374151' }}
+              formatter={(value: any, name: any) => {
+                if (name === 'core') return [Number(value).toLocaleString(), 'AI Jobs']
+                return [value, String(name)]
+              }}
+              labelFormatter={(ts: any) => new Date(Number(ts)).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+            />
+            <Scatter
+              data={data}
+              onClick={(point: any) => { if (point?.event) setSelectedEvent(point.event) }}
+              cursor="pointer"
+            >
+              {data.map((entry, i) => (
+                <Cell key={i} fill={catColor(entry.category)} fillOpacity={0.7} r={Math.min(8, Math.max(3, Math.sqrt(entry.core / 100)))} />
+              ))}
+            </Scatter>
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex items-center justify-center gap-4 mt-2 text-[10px] text-gray-400">
+        {['EXPLICIT', 'STRONG', 'MODERATE', 'WEAK'].map(cat => (
+          <span key={cat} className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full" style={{ background: catColor(cat) }} />
+            {cat.charAt(0) + cat.slice(1).toLowerCase()}
+          </span>
+        ))}
+      </div>
+    </>
   )
 }
 
@@ -501,7 +597,9 @@ function ReportLayout({ allEvents, chartData, hasData, stats, trackingLabel }: H
               All Sources <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
-          <EventTable events={filtered} />
+          <div className="bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] p-4">
+            <EventTimelineChart events={filtered} />
+          </div>
         </div>
 
         <p className="text-center text-[10px] text-gray-400 dark:text-[var(--dark-muted)] py-4 mt-4 border-t border-gray-200 dark:border-[var(--dark-border)]">
@@ -575,7 +673,9 @@ function TwoColumnLayout({ allEvents, chartData, hasData, stats, trackingLabel }
                 All Sources <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
-            <EventTable events={filtered} compact />
+            <div className="bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] p-3">
+              <EventTimelineChart events={filtered} />
+            </div>
           </div>
         </div>
 
@@ -681,7 +781,9 @@ function SidebarLayout({ allEvents, chartData, hasData, stats, trackingLabel }: 
                 All Sources <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
-            <EventTable events={filtered} />
+            <div className="bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] p-4">
+              <EventTimelineChart events={filtered} />
+            </div>
           </div>
         </main>
       </div>
@@ -753,7 +855,9 @@ function PanelLayout({ allEvents, chartData, hasData, stats, trackingLabel }: Ho
               All Sources <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
-          <EventTable events={filtered} />
+          <div className="bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] p-4">
+            <EventTimelineChart events={filtered} />
+          </div>
         </div>
 
         <p className="text-center text-[10px] text-gray-400 dark:text-[var(--dark-muted)] py-4 border-t border-gray-200 dark:border-[var(--dark-border)]">

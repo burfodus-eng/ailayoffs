@@ -5,6 +5,7 @@ import { getArticleRecommendations, affiliatePartners } from '@/lib/affiliates'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { ArticleJsonLd } from '@/components/json-ld'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,6 +49,15 @@ export default async function DigestArticlePage({ params }: { params: Promise<{ 
 
   return (
     <article className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+      <ArticleJsonLd
+        headline={article.title}
+        description={article.summary}
+        datePublished={article.publishedAt?.toISOString() || article.createdAt.toISOString()}
+        dateModified={article.updatedAt.toISOString()}
+        authorName={article.authorName}
+        url={`https://${brand.domain}/digest/${slug}`}
+        image={article.coverImageUrl || undefined}
+      />
       <Link href="/digest" className="text-xs text-blue-600 dark:text-blue-400 hover:underline mb-4 inline-block">
         &larr; Back to {brand.digestLabel}
       </Link>
@@ -148,10 +158,10 @@ function renderMarkdown(md: string): string {
       block = block.trim()
       if (!block) return ''
 
-      // Headings
-      if (block.startsWith('### ')) return `<h3>${escHtml(block.slice(4))}</h3>`
-      if (block.startsWith('## ')) return `<h2>${escHtml(block.slice(3))}</h2>`
-      if (block.startsWith('# ')) return `<h1>${escHtml(block.slice(2))}</h1>`
+      // Headings — downshift to avoid duplicate h1 (page title is h1)
+      if (block.startsWith('### ')) return `<h4>${escHtml(block.slice(4))}</h4>`
+      if (block.startsWith('## ')) return `<h3>${escHtml(block.slice(3))}</h3>`
+      if (block.startsWith('# ')) return `<h2>${escHtml(block.slice(2))}</h2>`
 
       // Table
       if (block.includes('|') && block.split('\n').length >= 2) {

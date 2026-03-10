@@ -2,7 +2,10 @@ import { Metadata } from 'next'
 import { prisma } from '@/lib/db'
 import { formatNumberFull } from '@/lib/utils'
 
-export const metadata: Metadata = { title: 'AI Jobs Created' }
+export const metadata: Metadata = {
+  title: 'AI Jobs Created',
+  description: 'Tracking new jobs created by AI companies and AI-driven hiring. See which companies are expanding their AI workforce and how many positions have been added.',
+}
 export const dynamic = 'force-dynamic'
 
 export default async function JobsCreatedPage() {

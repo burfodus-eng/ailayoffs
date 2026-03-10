@@ -1,6 +1,9 @@
 import { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Methodology' }
+export const metadata: Metadata = {
+  title: 'Methodology',
+  description: 'How we track AI-driven layoffs: data sources, attribution scoring, confidence tiers, and the weighted estimation framework behind our job displacement figures.',
+}
 
 export default function MethodologyPage() {
   return (

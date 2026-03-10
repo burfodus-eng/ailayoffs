@@ -2,7 +2,10 @@ import { Metadata } from 'next'
 import { prisma } from '@/lib/db'
 import { NetImpactClient } from '@/components/net-impact-client'
 
-export const metadata: Metadata = { title: 'Net Impact — AI Jobs Created vs Lost' }
+export const metadata: Metadata = {
+  title: 'Net Impact — AI Jobs Created vs Lost',
+  description: 'The net employment impact of AI: comparing jobs eliminated by automation against new positions created by AI companies. See the balance of AI-driven workforce change.',
+}
 export const dynamic = 'force-dynamic'
 
 export default async function NetImpactPage() {

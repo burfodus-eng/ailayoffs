@@ -1,7 +1,10 @@
 import { Metadata } from 'next'
 import { prisma } from '@/lib/db'
 
-export const metadata: Metadata = { title: 'AI Productivity & GDP Impact' }
+export const metadata: Metadata = {
+  title: 'AI Productivity & GDP Impact',
+  description: 'Tracking AI-driven productivity gains and GDP impact claims from companies deploying automation, machine learning, and generative AI tools.',
+}
 export const dynamic = 'force-dynamic'
 
 export default async function ProductivityPage() {

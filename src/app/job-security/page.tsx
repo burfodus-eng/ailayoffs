@@ -1,7 +1,10 @@
 import { Metadata } from 'next'
 import { JobSecurityClient } from '@/components/job-security-client'
 
-export const metadata: Metadata = { title: 'Job Security Analyzer' }
+export const metadata: Metadata = {
+  title: 'Job Security Analyzer',
+  description: 'Check how AI and automation might affect your job. Get an AI displacement risk estimate based on your role, industry, and current automation trends.',
+}
 
 export default function JobSecurityPage() {
   return (

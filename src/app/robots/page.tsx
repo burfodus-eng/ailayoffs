@@ -2,7 +2,10 @@ import { Metadata } from 'next'
 import { prisma } from '@/lib/db'
 import { formatNumberFull } from '@/lib/utils'
 
-export const metadata: Metadata = { title: 'Robot & Automation Job Loss Tracker' }
+export const metadata: Metadata = {
+  title: 'Robot & Automation Job Loss Tracker',
+  description: 'Tracking jobs displaced by robotics, RPA, and physical automation across manufacturing, logistics, and services. Includes warehouse robots, autonomous vehicles, and industrial automation.',
+}
 export const dynamic = 'force-dynamic'
 
 export default async function RobotsPage() {

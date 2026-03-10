@@ -3,7 +3,11 @@ import { prisma } from '@/lib/db'
 import { normalizeIndustry } from '@/lib/domains'
 import { NewsClient } from '@/components/news-client'
 
-export const metadata: Metadata = { title: 'News & Sources' }
+export const metadata: Metadata = {
+  title: 'News & Sources',
+  description: 'Latest AI layoff announcements, job cuts, and workforce restructuring events sourced from verified public reporting. Updated daily.',
+  openGraph: { title: 'News & Sources', description: 'Latest AI layoff announcements and workforce restructuring events from verified sources.' },
+}
 export const dynamic = 'force-dynamic'
 
 export default async function NewsPage() {

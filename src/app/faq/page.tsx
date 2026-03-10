@@ -1,6 +1,10 @@
 import { Metadata } from 'next'
+import { FAQJsonLd } from '@/components/json-ld'
 
-export const metadata: Metadata = { title: 'FAQ' }
+export const metadata: Metadata = {
+  title: 'Frequently Asked Questions',
+  description: 'Common questions about AI layoff tracking methodology, data accuracy, attribution categories, and how we estimate AI-driven job displacement.',
+}
 
 const faqs = [
   {
@@ -40,6 +44,7 @@ const faqs = [
 export default function FAQPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+      <FAQJsonLd questions={faqs} />
       <h1 className="text-3xl font-bold text-gray-900 dark:text-[var(--dark-text)] mb-8">Frequently Asked Questions</h1>
       <div className="space-y-6">
         {faqs.map((faq, i) => (

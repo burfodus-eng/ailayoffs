@@ -2,7 +2,10 @@ import { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { getBrandFromHost } from '@/lib/domains'
 
-export const metadata: Metadata = { title: 'About' }
+export const metadata: Metadata = {
+  title: 'About',
+  description: 'About this AI layoff tracker: our mission, data sources, editorial approach, and the team behind the most comprehensive AI-driven job displacement database.',
+}
 
 export default async function AboutPage() {
   const headersList = await headers()
