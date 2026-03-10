@@ -538,9 +538,7 @@ function ChartEventsSwitcher({
       {view === 'chart' ? (
         <ChartWithZoom chartData={chartData} chartType={chartType} />
       ) : (
-        <div className="max-h-[380px] overflow-y-auto">
-          <EventTable events={filteredEvents} />
-        </div>
+        <EventTimelineChart events={filteredEvents} />
       )}
     </div>
   )
@@ -597,9 +595,7 @@ function ReportLayout({ allEvents, chartData, hasData, stats, trackingLabel }: H
               All Sources <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
-          <div className="bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] p-4">
-            <EventTimelineChart events={filtered} />
-          </div>
+          <EventTable events={filtered} />
         </div>
 
         <p className="text-center text-[10px] text-gray-400 dark:text-[var(--dark-muted)] py-4 mt-4 border-t border-gray-200 dark:border-[var(--dark-border)]">
@@ -673,9 +669,7 @@ function TwoColumnLayout({ allEvents, chartData, hasData, stats, trackingLabel }
                 All Sources <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
-            <div className="bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] p-3">
-              <EventTimelineChart events={filtered} />
-            </div>
+            <EventTable events={filtered} />
           </div>
         </div>
 
@@ -781,9 +775,7 @@ function SidebarLayout({ allEvents, chartData, hasData, stats, trackingLabel }: 
                 All Sources <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
-            <div className="bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] p-4">
-              <EventTimelineChart events={filtered} />
-            </div>
+            <EventTable events={filtered} />
           </div>
         </main>
       </div>
@@ -855,9 +847,7 @@ function PanelLayout({ allEvents, chartData, hasData, stats, trackingLabel }: Ho
               All Sources <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
-          <div className="bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] p-4">
-            <EventTimelineChart events={filtered} />
-          </div>
+          <EventTable events={filtered} />
         </div>
 
         <p className="text-center text-[10px] text-gray-400 dark:text-[var(--dark-muted)] py-4 border-t border-gray-200 dark:border-[var(--dark-border)]">
