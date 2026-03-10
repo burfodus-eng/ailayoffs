@@ -314,12 +314,14 @@ export default function AnalyticsDashboard() {
               </div>
               {/* Mini sparkline */}
               {site.pageviews?.pageviews?.length > 0 && (() => {
-                let sparkData = site.pageviews.pageviews
+                // Trim trailing zero-value points (future empty time buckets from Umami)
+                let sparkData = [...site.pageviews.pageviews]
+                while (sparkData.length > 1 && sparkData[sparkData.length - 1].y === 0) {
+                  sparkData.pop()
+                }
                 // Pad sparse data so the chart renders a line instead of a dot
                 if (sparkData.length === 1) {
-                  sparkData = [{ x: '', y: 0 }, sparkData[0], { x: ' ', y: 0 }]
-                } else if (sparkData.length === 2) {
-                  sparkData = [{ x: '', y: 0 }, ...sparkData, { x: ' ', y: 0 }]
+                  sparkData = [{ ...sparkData[0], x: '' }, sparkData[0], { ...sparkData[0], x: ' ' }]
                 }
                 return (
                   <div className="mt-2 h-10">
