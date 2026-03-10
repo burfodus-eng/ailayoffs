@@ -40,12 +40,12 @@ const faqs = [
 export default function FAQPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
-      <h1 className="text-3xl font-bold text-white mb-8">Frequently Asked Questions</h1>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-[var(--dark-text)] mb-8">Frequently Asked Questions</h1>
       <div className="space-y-6">
         {faqs.map((faq, i) => (
-          <div key={i} className="bg-slate-900/50 border border-slate-800 rounded-lg p-5">
-            <h2 className="text-white font-semibold mb-2">{faq.q}</h2>
-            <p className="text-gray-300 text-sm">{faq.a}</p>
+          <div key={i} className="bg-white dark:bg-[var(--dark-card)] border border-gray-200 dark:border-[var(--dark-border)] rounded-lg p-5 shadow-sm">
+            <h2 className="text-gray-900 dark:text-[var(--dark-text)] font-semibold mb-2">{faq.q}</h2>
+            <p className="text-gray-600 dark:text-[var(--dark-muted)] text-sm">{faq.a}</p>
           </div>
         ))}
       </div>

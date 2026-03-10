@@ -99,6 +99,14 @@ const companyDomains: Record<string, string> = {
   'EA (Electronic Arts)': 'ea.com',
 
   // Transport
+  'CrowdStrike': 'crowdstrike.com',
+  'Omnicom': 'omnicomgroup.com',
+  'HP': 'hp.com',
+  'FedEx': 'fedex.com',
+  'Southwest Airlines': 'southwest.com',
+  'Panasonic': 'panasonic.com',
+  'Mastercard': 'mastercard.com',
+  'Banco Santander': 'santander.com',
   'United Airlines': 'united.com',
   'American Airlines': 'aa.com',
   'C.H. Robinson': 'chrobinson.com',
