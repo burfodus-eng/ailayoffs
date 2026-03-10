@@ -240,6 +240,35 @@ model LiveCounter {
   updatedAt      DateTime @updatedAt
 }
 
+model DataSource {
+  id            String   @id @default(cuid())
+  name          String
+  url           String   @unique
+  type          String   // tracker, news, government, research, industry, union, forum, api, filings
+  category      String   // ai_layoffs | robot_automation | both
+  region        String?  // global, US, UK, EU, Asia-Pacific, etc.
+  country       String?  // ISO country code
+  language      String   @default("en")
+  description   String?  // editorial description for the public page
+  tier          Int      @default(3) // 1=high yield, 2=good, 3=moderate, 4=research, 5=niche
+  checkFrequency String? // daily, weekly, monthly, quarterly
+  hasApi        Boolean  @default(false)
+  hasRss        Boolean  @default(false)
+  rssUrl        String?
+  paywalled     Boolean  @default(false)
+  active        Boolean  @default(true) // false = link died or source stopped producing
+  lastChecked   DateTime?
+  eventsFound   Int      @default(0) // how many events this source has contributed
+  notes         String?  // internal notes
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([category])
+  @@index([tier])
+  @@index([active])
+  @@index([region])
+}
+
 model WeightConfig {
   id             String   @id @default(cuid())
   name           String   @unique

@@ -313,15 +313,30 @@ export default function AnalyticsDashboard() {
                 </div>
               </div>
               {/* Mini sparkline */}
-              {site.pageviews?.pageviews?.length > 0 && (
-                <div className="mt-2 h-8">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={site.pageviews.pageviews}>
-                      <Area type="monotone" dataKey="y" stroke={site.color} fill={site.color} fillOpacity={0.1} strokeWidth={1.5} dot={false} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
+              {site.pageviews?.pageviews?.length > 0 && (() => {
+                let sparkData = site.pageviews.pageviews
+                // Pad sparse data so the chart renders a line instead of a dot
+                if (sparkData.length === 1) {
+                  sparkData = [{ x: '', y: 0 }, sparkData[0], { x: ' ', y: 0 }]
+                } else if (sparkData.length === 2) {
+                  sparkData = [{ x: '', y: 0 }, ...sparkData, { x: ' ', y: 0 }]
+                }
+                return (
+                  <div className="mt-2 h-10">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={sparkData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+                        <defs>
+                          <linearGradient id={`spark-${site.id}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={site.color} stopOpacity={0.3} />
+                            <stop offset="100%" stopColor={site.color} stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <Area type="monotone" dataKey="y" stroke={site.color} fill={`url(#spark-${site.id})`} strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )
+              })()}
             </button>
           ))}
         </div>

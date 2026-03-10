@@ -16,6 +16,7 @@ const baseNavLinks = [
   { href: '/jobs-created', label: 'Jobs Created' },
   { href: '/robots', label: 'Robot Tracker' },
   { href: '/methodology', label: 'Methodology' },
+  { href: '/sources', label: 'Sources' },
 ]
 
 // Brand-specific nav emphasis — reorder/relabel for each brand
@@ -36,6 +37,7 @@ const brandNavOverrides: Partial<Record<BrandKey, { href: string; label: string 
     { href: '/jobs-created', label: 'Jobs Created' },
     { href: '/robots', label: 'Automation' },
     { href: '/methodology', label: 'Methodology' },
+    { href: '/sources', label: 'Data Sources' },
   ],
   robotlayoffs: [
     { href: '/', label: 'Tracker' },
@@ -44,6 +46,7 @@ const brandNavOverrides: Partial<Record<BrandKey, { href: string; label: string 
     { href: '/robots', label: 'Robot Tracker' },
     { href: '/net-impact', label: 'Net Impact' },
     { href: '/methodology', label: 'Methodology' },
+    { href: '/sources', label: 'Sources' },
   ],
 }
 
