@@ -49,6 +49,7 @@ export function Footer() {
             </div>
             <p className="text-[10px] text-gray-300 dark:text-gray-600 mt-1.5">
               Part of a network of AI and automation tracking sites sharing a common data platform.
+              Some links may earn us a commission.
             </p>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { headers } from 'next/headers'
-import { getBrandFromHost } from '@/lib/domains'
+import { getBrandFromHost, type BrandKey } from '@/lib/domains'
+import { getArticleRecommendations, affiliatePartners } from '@/lib/affiliates'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
@@ -87,6 +88,9 @@ export default async function DigestArticlePage({ params }: { params: Promise<{ 
         dangerouslySetInnerHTML={{ __html: renderMarkdown(article.body) }}
       />
 
+      {/* Recommendation Module */}
+      <RecommendationModule brandKey={brand.key as BrandKey} />
+
       <div className="mt-10 pt-6 border-t border-gray-200 dark:border-[var(--dark-border)]">
         <p className="text-xs text-gray-400 dark:text-[var(--dark-muted)]">
           Published by {brand.name} &middot; Data estimated from public reporting &middot;{' '}
@@ -97,7 +101,46 @@ export default async function DigestArticlePage({ params }: { params: Promise<{ 
   )
 }
 
-// Simple markdown to HTML (headings, bold, links, lists, paragraphs)
+// Article-end recommendation module
+function RecommendationModule({ brandKey }: { brandKey: BrandKey }) {
+  const recs = getArticleRecommendations()
+  // ailayoffwatch is most restrained
+  const isRestrained = brandKey === 'ailayoffwatch'
+
+  const items = [
+    { partner: recs.training, label: 'Training', desc: 'Build in-demand skills with structured courses' },
+    { partner: recs.tool, label: 'Tool', desc: 'Research and productivity tools for the AI era' },
+    ...(!isRestrained ? [{ partner: recs.career, label: 'Career', desc: 'Resume and job transition support' }] : []),
+  ]
+
+  return (
+    <div className="mt-10 pt-6 border-t border-gray-100 dark:border-[var(--dark-border)]">
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-[var(--dark-muted)] mb-3">
+        What to learn next
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {items.map(({ partner, label, desc }) => (
+          <a
+            key={partner.id}
+            href={partner.url}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="block border border-gray-150 dark:border-[var(--dark-border)] rounded-lg p-3 hover:border-gray-300 dark:hover:border-[var(--dark-accent)] transition-colors bg-white dark:bg-[var(--dark-card)]"
+          >
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-[var(--dark-muted)]">{label}</span>
+            <p className="text-sm font-medium text-gray-900 dark:text-[var(--dark-text)] mt-0.5">{partner.name}</p>
+            <p className="text-xs text-gray-500 dark:text-[var(--dark-muted)] mt-1">{desc}</p>
+          </a>
+        ))}
+      </div>
+      <p className="text-[10px] text-gray-400 dark:text-[var(--dark-muted)] mt-2">
+        Some links may earn us a commission. We only recommend resources we believe provide genuine value.
+      </p>
+    </div>
+  )
+}
+
+// Markdown to HTML (headings, bold, links, lists, tables, paragraphs)
 function renderMarkdown(md: string): string {
   return md
     .split('\n\n')
@@ -109,6 +152,20 @@ function renderMarkdown(md: string): string {
       if (block.startsWith('### ')) return `<h3>${escHtml(block.slice(4))}</h3>`
       if (block.startsWith('## ')) return `<h2>${escHtml(block.slice(3))}</h2>`
       if (block.startsWith('# ')) return `<h1>${escHtml(block.slice(2))}</h1>`
+
+      // Table
+      if (block.includes('|') && block.split('\n').length >= 2) {
+        const rows = block.split('\n').filter(r => r.trim().startsWith('|'))
+        if (rows.length >= 2) {
+          const parseRow = (r: string) => r.split('|').slice(1, -1).map(c => c.trim())
+          const headerCells = parseRow(rows[0])
+          // Skip separator row (row[1] with dashes)
+          const dataRows = rows.slice(2)
+          const thead = `<thead><tr>${headerCells.map(c => `<th>${inlineFormat(c)}</th>`).join('')}</tr></thead>`
+          const tbody = `<tbody>${dataRows.map(r => `<tr>${parseRow(r).map(c => `<td>${inlineFormat(c)}</td>`).join('')}</tr>`).join('')}</tbody>`
+          return `<table>${thead}${tbody}</table>`
+        }
+      }
 
       // Unordered list
       if (block.match(/^[-*] /m)) {

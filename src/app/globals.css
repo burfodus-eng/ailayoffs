@@ -37,3 +37,25 @@ body {
   background: var(--dark-bg);
   color: var(--dark-text);
 }
+
+/* Subtle affiliate links — slightly different from regular links */
+a[data-affiliate] {
+  color: #4b5563;
+  text-decoration-color: #d1d5db;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+a[data-affiliate]:hover {
+  color: #2563eb;
+  text-decoration-color: #2563eb;
+}
+.dark a[data-affiliate] {
+  color: #9ca3af;
+  text-decoration-color: #4b5563;
+}
+.dark a[data-affiliate]:hover {
+  color: #60a5fa;
+  text-decoration-color: #60a5fa;
+}
