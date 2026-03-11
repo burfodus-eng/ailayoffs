@@ -119,6 +119,17 @@ export default function MethodologyPage() {
         </section>
 
         <section>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-[var(--dark-text)]">Editorial Process & AI Disclosure</h2>
+          <p className="text-gray-700 dark:text-[var(--dark-text)]">
+            All data sourcing, event classification, and article content on this site is human-curated.
+            Our editorial team selects sources, verifies events, and makes final decisions on attribution
+            categories and estimates. AI tools are used to assist with initial discovery, summarisation,
+            and drafting, but all published content is reviewed and approved by our editorial team before
+            publication.
+          </p>
+        </section>
+
+        <section>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-[var(--dark-text)]">Corrections</h2>
           <p className="text-gray-700 dark:text-[var(--dark-text)]">
             If you believe an event has been misclassified, miscounted, or is missing, please contact us.

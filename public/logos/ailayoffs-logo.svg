@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="64" fill="#0f172a"/>
+  <!-- Downward trend arrow -->
+  <polyline points="100,160 220,200 300,280 420,380" stroke="#ef4444" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <polygon points="420,380 370,355 395,330" fill="#ef4444"/>
+  <!-- Circuit dots on the line -->
+  <circle cx="100" cy="160" r="14" fill="#ef4444"/>
+  <circle cx="220" cy="200" r="14" fill="#ef4444"/>
+  <circle cx="300" cy="280" r="14" fill="#ef4444"/>
+  <!-- AI text -->
+  <text x="256" y="140" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="80" fill="#ef4444" opacity="0.3">AI</text>
+  <!-- Initials -->
+  <text x="256" y="460" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="48" fill="#ffffff" letter-spacing="4">AILAYOFFS</text>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="64" fill="#0f172a"/>
+  <!-- Calendar grid -->
+  <rect x="106" y="120" width="300" height="260" rx="16" fill="none" stroke="#4ecdc4" stroke-width="10"/>
+  <!-- Calendar top bar -->
+  <rect x="106" y="120" width="300" height="60" rx="16" fill="#4ecdc4" opacity="0.2"/>
+  <line x1="106" y1="180" x2="406" y2="180" stroke="#4ecdc4" stroke-width="4"/>
+  <!-- Calendar hooks -->
+  <line x1="190" y1="100" x2="190" y2="140" stroke="#4ecdc4" stroke-width="10" stroke-linecap="round"/>
+  <line x1="322" y1="100" x2="322" y2="140" stroke="#4ecdc4" stroke-width="10" stroke-linecap="round"/>
+  <!-- Grid lines -->
+  <line x1="206" y1="180" x2="206" y2="380" stroke="#4ecdc4" stroke-width="2" opacity="0.3"/>
+  <line x1="306" y1="180" x2="306" y2="380" stroke="#4ecdc4" stroke-width="2" opacity="0.3"/>
+  <line x1="106" y1="247" x2="406" y2="247" stroke="#4ecdc4" stroke-width="2" opacity="0.3"/>
+  <line x1="106" y1="313" x2="406" y2="313" stroke="#4ecdc4" stroke-width="2" opacity="0.3"/>
+  <!-- Shift blocks (colored cells) -->
+  <rect x="116" y="190" width="80" height="48" rx="6" fill="#4ecdc4" opacity="0.5"/>
+  <rect x="216" y="256" width="80" height="48" rx="6" fill="#4ecdc4" opacity="0.35"/>
+  <rect x="316" y="322" width="80" height="48" rx="6" fill="#4ecdc4" opacity="0.5"/>
+  <rect x="116" y="322" width="80" height="48" rx="6" fill="#4ecdc4" opacity="0.2"/>
+  <!-- Initials -->
+  <text x="256" y="455" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="56" fill="#ffffff" letter-spacing="6">SC</text>
+</svg>

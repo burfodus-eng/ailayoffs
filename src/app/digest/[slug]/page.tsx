@@ -101,6 +101,12 @@ export default async function DigestArticlePage({ params }: { params: Promise<{ 
       {/* Recommendation Module */}
       <RecommendationModule brandKey={brand.key as BrandKey} />
 
+      <div className="mt-8 px-4 py-3 bg-gray-50 dark:bg-[var(--dark-surface)] rounded border border-gray-100 dark:border-[var(--dark-border)]">
+        <p className="text-xs text-gray-500 dark:text-[var(--dark-muted)] italic">
+          This summary was prepared with AI assistance and reviewed by our editorial team.
+        </p>
+      </div>
+
       <div className="mt-10 pt-6 border-t border-gray-200 dark:border-[var(--dark-border)]">
         <p className="text-xs text-gray-400 dark:text-[var(--dark-muted)]">
           Published by {brand.name} &middot; Data estimated from public reporting &middot;{' '}
