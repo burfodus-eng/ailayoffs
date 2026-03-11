@@ -40,7 +40,27 @@ function savePosted(records: PostedRecord[]) {
   fs.writeFileSync(POSTED_FILE, JSON.stringify(records, null, 2))
 }
 
-async function postToFacebook(message: string, link: string): Promise<{ id: string }> {
+async function postToFacebook(message: string, link: string, imageUrl?: string | null): Promise<{ id: string }> {
+  // If we have an image, post as a photo with the link in the message
+  if (imageUrl) {
+    const photoApi = `https://graph.facebook.com/v21.0/${FB_PAGE_ID}/photos`
+    const res = await fetch(photoApi, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: imageUrl,
+        message: message + `\n\n🔗 Read the full report: ${link}`,
+        access_token: FB_PAGE_TOKEN,
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(`Facebook API error: ${JSON.stringify(err)}`)
+    }
+    return res.json() as Promise<{ id: string }>
+  }
+
+  // Fallback: link post without image
   const res = await fetch(GRAPH_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -98,22 +118,52 @@ async function main() {
       const title = article.socialTitle || article.title
       const link = `https://ailayoffs.com.au/digest/${article.slug}`
 
-      // Build message: title + description
-      let message = title
-      if (article.socialSummary) {
-        message += `\n\n${article.socialSummary}`
+      // Build a rich message with enough content before the "See more" fold
+      // Facebook shows ~480 chars before truncating
+      const parts: string[] = []
+      parts.push(`📊 ${title}`)
+      parts.push('')
+
+      // Add the summary
+      if (article.socialSummary || article.summary) {
+        parts.push(article.socialSummary || article.summary!)
+        parts.push('')
       }
+
+      // Extract key points from the body (first few paragraphs, skip markdown headers)
+      if (article.body) {
+        const paragraphs = article.body
+          .split('\n')
+          .filter(l => l.trim() && !l.startsWith('#') && !l.startsWith('---') && !l.startsWith('!['))
+          .map(l => l.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').trim())
+          .filter(l => l.length > 40)
+          .slice(0, 3)
+
+        if (paragraphs.length > 0) {
+          parts.push('Key findings:')
+          for (const p of paragraphs) {
+            parts.push(`▸ ${p.substring(0, 150)}${p.length > 150 ? '...' : ''}`)
+          }
+          parts.push('')
+        }
+      }
+
+      parts.push('#AILayoffs #AI #ArtificialIntelligence #FutureOfWork #TechLayoffs #Automation')
+
+      const message = parts.join('\n')
+      const imageUrl = article.coverImageUrl || article.socialImageUrl
 
       console.log(`--- ${article.slug} ---`)
       console.log(`  Title:   ${title}`)
       console.log(`  Link:    ${link}`)
-      console.log(`  Message: ${message.substring(0, 120)}...`)
+      console.log(`  Image:   ${imageUrl || 'none'}`)
+      console.log(`  Message: ${message.substring(0, 200)}...`)
 
       if (dryRun) {
         console.log('  [DRY RUN — skipping post]')
       } else {
         try {
-          const result = await postToFacebook(message, link)
+          const result = await postToFacebook(message, link, imageUrl)
           console.log(`  Posted! Facebook ID: ${result.id}`)
 
           posted.push({
