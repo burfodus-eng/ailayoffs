@@ -206,7 +206,7 @@ const industryImages: Record<string, string> = {
 export function getCompanyLogoUrl(companyName: string | null): string {
   if (!companyName) return ''
   const domain = companyDomains[companyName]
-  if (domain) return `https://logo.clearbit.com/${domain}?size=200`
+  if (domain) return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
   // Try fuzzy match
   const lower = companyName.toLowerCase()
   for (const [name, d] of Object.entries(companyDomains)) {
