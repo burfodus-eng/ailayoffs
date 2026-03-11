@@ -64,7 +64,10 @@ export async function GET(req: NextRequest) {
 
     const results = await Promise.all(
       SITES.map(async (site) => {
-        const [stats, active, pageviews, topPages, referrers, countries, browsers, os, devices] = await Promise.all([
+        const allTimeStart = new Date('2025-01-01T00:00:00Z').getTime().toString()
+        const allTimeEnd = now.toString()
+
+        const [stats, active, pageviews, topPages, referrers, countries, browsers, os, devices, allTimePageviews] = await Promise.all([
           fetchUmami(token, `/api/websites/${site.id}/stats`, timeParams),
           fetchUmami(token, `/api/websites/${site.id}/active`),
           fetchUmami(token, `/api/websites/${site.id}/pageviews`, { ...timeParams, unit }),
@@ -74,6 +77,7 @@ export async function GET(req: NextRequest) {
           fetchUmami(token, `/api/websites/${site.id}/metrics`, { ...timeParams, type: 'browser', limit: '10' }),
           fetchUmami(token, `/api/websites/${site.id}/metrics`, { ...timeParams, type: 'os', limit: '10' }),
           fetchUmami(token, `/api/websites/${site.id}/metrics`, { ...timeParams, type: 'device', limit: '10' }),
+          fetchUmami(token, `/api/websites/${site.id}/pageviews`, { startAt: allTimeStart, endAt: allTimeEnd, unit: 'month' }),
         ])
 
         return {
@@ -87,6 +91,7 @@ export async function GET(req: NextRequest) {
           browsers: browsers || [],
           os: os || [],
           devices: devices || [],
+          allTimePageviews: allTimePageviews?.pageviews || [],
         }
       })
     )

@@ -33,6 +33,7 @@ interface SiteData {
   browsers: { x: string; y: number }[]
   os: { x: string; y: number }[]
   devices: { x: string; y: number }[]
+  allTimePageviews: { x: string; y: number }[]
 }
 
 interface AnalyticsData {
@@ -390,6 +391,58 @@ export default function AnalyticsDashboard() {
             </ResponsiveContainer>
           </div>
         </div>
+
+        {/* Cumulative traffic chart — all time */}
+        {sites.length > 0 && (() => {
+          // Build cumulative data from allTimePageviews
+          const monthSet = new Set<string>()
+          for (const site of sites) {
+            for (const pv of site.allTimePageviews || []) {
+              monthSet.add(pv.x)
+            }
+          }
+          const months = [...monthSet].sort()
+          const cumulativeData = months.map((month, idx) => {
+            const d = new Date(month)
+            const label = d.toLocaleDateString([], { year: 'numeric', month: 'short' })
+            const entry: Record<string, any> = { month: label }
+            for (const site of sites) {
+              const allPvs = site.allTimePageviews || []
+              let cumulative = 0
+              for (let i = 0; i <= idx; i++) {
+                const pv = allPvs.find(p => p.x === months[i])
+                cumulative += pv ? pv.y : 0
+              }
+              entry[site.name] = cumulative
+            }
+            return entry
+          })
+
+          return (
+            <div className="bg-[#1a1b23] border border-[#2a2b35] rounded-lg p-4 mb-6">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
+                Cumulative Traffic — All Time
+              </h2>
+              <div style={{ height: 320 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={cumulativeData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                    <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={{ stroke: '#1f2937' }} />
+                    <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={{ stroke: '#1f2937' }} width={50} tickFormatter={(v: number) => fmt(v)} />
+                    <Tooltip
+                      contentStyle={{ background: '#1a1b23', border: '1px solid #2a2b35', fontSize: 12, color: '#fff', borderRadius: 6 }}
+                      formatter={(v: any, n: any) => [Number(v).toLocaleString(), String(n)]}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 10 }} />
+                    {sites.map(site => (
+                      <Area key={site.id} type="monotone" dataKey={site.name} stroke={site.color} fill={site.color} fillOpacity={0.1} strokeWidth={1.5} stackId="1" name={site.name} />
+                    ))}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Detailed metrics grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
