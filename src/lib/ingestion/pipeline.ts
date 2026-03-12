@@ -2,6 +2,7 @@ import Exa from 'exa-js'
 import { PrismaClient } from '@/generated/prisma'
 import { classifyArticle, ClassificationResult } from './classify'
 import { getQueriesForRun } from './search-queries'
+import { getSourceReputation } from './source-reputation'
 
 // Normalize company name for dedup matching
 function normalizeCompanyName(name: string): string {
@@ -93,6 +94,15 @@ export async function runIngestionPipeline(
 
           if (!item.url || !item.title) continue
 
+          // ── Source reputation gate (before any LLM calls) ──
+          const reputation = getSourceReputation(item.url)
+
+          if (reputation.tier === 'blocked') {
+            console.log(`BLOCK (banned source): ${reputation.domain} — ${item.title}`)
+            result.eventsSkipped++
+            continue
+          }
+
           // Check for duplicate article by URL
           const existingArticle = await prisma.article.findUnique({
             where: { url: item.url },
@@ -119,38 +129,28 @@ export async function runIngestionPipeline(
 
           // HARD RULE: Reject events with no date — too vague to be trustworthy
           if (!classification.dateAnnounced) {
-            console.log(`SKIP (no date): ${classification.companyName} from ${item.url}`)
+            console.log(`SKIP (no date): ${classification.companyName} from ${reputation.domain}`)
             result.eventsSkipped++
             continue
           }
 
-          // Reject events with no job count and no date (too vague)
-          if (!classification.jobCount && !classification.dateAnnounced) {
+          // ── Source-tier-aware quality gates ──
+
+          // Unknown sources need a specific job count — vague "layoffs" isn't enough
+          if (reputation.requiresJobCount && !classification.jobCount) {
+            console.log(`SKIP (unknown source, no job count): ${classification.companyName} from ${reputation.domain}`)
             result.eventsSkipped++
             continue
           }
 
-          // Source quality check: reject known content farms and low-quality domains
-          const articleDomain = new URL(item.url).hostname.replace('www.', '')
-          const LOW_QUALITY_PATTERNS = [
-            /\.edu\/exp\//,          // university content farms
-            /medium\.com/,           // unvetted blog posts
-            /blogspot\./,            // personal blogs
-            /wordpress\.com/,        // free wordpress blogs
-            /substack\.com/,         // unvetted newsletters (too variable)
-          ]
-          if (LOW_QUALITY_PATTERNS.some(p => p.test(item.url))) {
-            console.log(`SKIP (low-quality source): ${articleDomain} — ${item.title}`)
+          // Check LLM confidence against source tier minimum
+          if (classification.confidenceScore < reputation.minConfidence) {
+            console.log(`SKIP (confidence ${classification.confidenceScore} < ${reputation.minConfidence} for ${reputation.tier} source): ${classification.companyName} from ${reputation.domain}`)
             result.eventsSkipped++
             continue
           }
 
-          // Reject low confidence classifications
-          if (classification.confidenceScore < 0.4) {
-            console.log(`SKIP (low confidence ${classification.confidenceScore}): ${classification.companyName} from ${item.url}`)
-            result.eventsSkipped++
-            continue
-          }
+          console.log(`[${reputation.tier}] ${reputation.domain} (score ${reputation.score}) — ${classification.companyName}: ${classification.jobCount || '?'} jobs`)
 
           // Fuzzy duplicate check: find recent events for similar company names
           // For events with dates, check ±90 days. Also check ALL events for same company (catches dateless dupes).
