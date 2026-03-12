@@ -4,6 +4,7 @@ import { classifyArticle, ClassificationResult } from './classify'
 import { getQueriesForRun } from './search-queries'
 import { getSourceReputation } from './source-reputation'
 import { queuePostsForEvents } from '@/lib/social/queue-posts'
+import { notifyMakeWebhook } from '@/lib/social/notify-make'
 
 // Normalize company name for dedup matching
 function normalizeCompanyName(name: string): string {
@@ -345,6 +346,14 @@ export async function runIngestionPipeline(
       console.log(`[SOCIAL] Queued ${queued} posts for ${createdEventIds.length} new events`)
     } catch (e: any) {
       console.error(`[SOCIAL] Failed to queue posts: ${e.message}`)
+    }
+
+    // Notify Make.com for video generation
+    try {
+      const sent = await notifyMakeWebhook(prisma, createdEventIds)
+      if (sent > 0) console.log(`[MAKE] Notified Make for ${sent} events`)
+    } catch (e: any) {
+      console.error(`[MAKE] Failed to notify: ${e.message}`)
     }
   }
 
