@@ -69,7 +69,7 @@ const TIER_DOTS: Record<number, string> = {
 
 const DEFAULT_LIMIT = 50
 
-export function SourcesList({ sources, types, regions, tiers, brandKey }: SourcesListProps) {
+export function SourcesList({ sources, types, regions, countries, tiers, brandKey }: SourcesListProps) {
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [regionFilter, setRegionFilter] = useState<string>('all')
   const [tierFilter, setTierFilter] = useState<string>('all')
