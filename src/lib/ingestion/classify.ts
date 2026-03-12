@@ -24,8 +24,10 @@ CRITICAL RULES:
   - Opinion pieces or predictions without a concrete announced event
   - Articles about AI industry trends without a specific company action
 - companyName must be the SHORT, canonical company name: "Block" not "Block (formerly Square)", "Oracle" not "Oracle Corp." or "Oracle Corporation", "Meta" not "Meta Platforms Inc."
-- dateAnnounced is REQUIRED for layoff/hiring events. Use the date the action was announced. If no specific date is mentioned in the article, estimate from context or set to null — but events without dates are lower quality.
-- jobCount should be a specific number. Do not use 0 — if no number is mentioned, set to null.
+- dateAnnounced is REQUIRED for layoff/hiring events. Use the date the action was announced. If no specific date is mentioned in the article, set to null. Do NOT guess or estimate dates. Events without dates will be REJECTED.
+- jobCount should be a specific number mentioned in the article. Do not use 0 — if no number is mentioned, set to null. Do NOT extrapolate or estimate job counts beyond what the source states.
+- confidenceScore should reflect how trustworthy the SOURCE is, not just the content. Well-known news outlets (Reuters, Bloomberg, NYT, BBC, etc.) get higher scores. Unknown blogs, university subdomains, and content farms should get scores below 0.4.
+- REJECT (relevant=false) articles from sources that appear to be AI-generated content farms, SEO articles, or republished press releases with no original reporting.
 - country should be the 2-letter ISO code: "US", "AU", "UK", "IN", "DE", etc.
 
 Attribution categories:

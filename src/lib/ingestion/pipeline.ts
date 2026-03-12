@@ -117,23 +117,60 @@ export async function runIngestionPipeline(
             continue
           }
 
+          // HARD RULE: Reject events with no date — too vague to be trustworthy
+          if (!classification.dateAnnounced) {
+            console.log(`SKIP (no date): ${classification.companyName} from ${item.url}`)
+            result.eventsSkipped++
+            continue
+          }
+
           // Reject events with no job count and no date (too vague)
           if (!classification.jobCount && !classification.dateAnnounced) {
             result.eventsSkipped++
             continue
           }
 
+          // Source quality check: reject known content farms and low-quality domains
+          const articleDomain = new URL(item.url).hostname.replace('www.', '')
+          const LOW_QUALITY_PATTERNS = [
+            /\.edu\/exp\//,          // university content farms
+            /medium\.com/,           // unvetted blog posts
+            /blogspot\./,            // personal blogs
+            /wordpress\.com/,        // free wordpress blogs
+            /substack\.com/,         // unvetted newsletters (too variable)
+          ]
+          if (LOW_QUALITY_PATTERNS.some(p => p.test(item.url))) {
+            console.log(`SKIP (low-quality source): ${articleDomain} — ${item.title}`)
+            result.eventsSkipped++
+            continue
+          }
+
+          // Reject low confidence classifications
+          if (classification.confidenceScore < 0.4) {
+            console.log(`SKIP (low confidence ${classification.confidenceScore}): ${classification.companyName} from ${item.url}`)
+            result.eventsSkipped++
+            continue
+          }
+
           // Fuzzy duplicate check: find recent events for similar company names
-          // We query broadly by event type and date range, then filter by fuzzy name match
-          const candidateDate = classification.dateAnnounced ? new Date(classification.dateAnnounced) : new Date()
+          // For events with dates, check ±90 days. Also check ALL events for same company (catches dateless dupes).
+          const candidateDate = new Date(classification.dateAnnounced)
           const potentialDuplicates = await prisma.event.findMany({
             where: {
               eventType: classification.eventType as any,
               reviewStatus: { not: 'EXCLUDED' },
-              dateAnnounced: {
-                gte: new Date(candidateDate.getTime() - 90 * 24 * 60 * 60 * 1000),
-                lte: new Date(candidateDate.getTime() + 30 * 24 * 60 * 60 * 1000),
-              },
+              OR: [
+                {
+                  dateAnnounced: {
+                    gte: new Date(candidateDate.getTime() - 90 * 24 * 60 * 60 * 1000),
+                    lte: new Date(candidateDate.getTime() + 30 * 24 * 60 * 60 * 1000),
+                  },
+                },
+                {
+                  // Also catch events with no date for the same company
+                  dateAnnounced: null,
+                },
+              ],
             },
             select: { id: true, companyName: true, jobsCutAnnounced: true },
           })
