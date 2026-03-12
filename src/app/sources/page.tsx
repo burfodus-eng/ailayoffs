@@ -49,6 +49,7 @@ export default async function SourcesPage() {
   // Extract unique filter values
   const types = [...new Set(sources.map(s => s.type).filter(Boolean))] as string[]
   const regions = [...new Set(sources.map(s => s.region).filter(Boolean))] as string[]
+  const countries = [...new Set(sources.map(s => s.country).filter(Boolean))] as string[]
   const tiers = [...new Set(sources.map(s => s.tier))].sort()
 
   return (
@@ -61,10 +62,14 @@ export default async function SourcesPage() {
           ? 'The news outlets, trackers, government agencies, and research institutions we monitor for robot and automation-related workforce displacement.'
           : 'The news outlets, trackers, government agencies, and research institutions we monitor for AI-related workforce displacement.'}
       </p>
+      <p className="text-sm text-gray-500 dark:text-[var(--dark-muted)] mb-8">
+        {sources.length} sources across {countries.length} countries
+      </p>
       <SourcesList
         sources={sources}
         types={types}
         regions={regions}
+        countries={countries}
         tiers={tiers}
         brandKey={brand.key}
       />

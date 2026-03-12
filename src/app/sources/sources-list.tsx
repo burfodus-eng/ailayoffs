@@ -22,6 +22,7 @@ interface SourcesListProps {
   sources: SourceItem[]
   types: string[]
   regions: string[]
+  countries: string[]
   tiers: number[]
   brandKey: string
 }
@@ -72,16 +73,18 @@ export function SourcesList({ sources, types, regions, tiers, brandKey }: Source
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [regionFilter, setRegionFilter] = useState<string>('all')
   const [tierFilter, setTierFilter] = useState<string>('all')
+  const [countryFilter, setCountryFilter] = useState<string>('all')
   const [showAll, setShowAll] = useState(false)
 
   const filtered = sources.filter(s => {
     if (typeFilter !== 'all' && s.type !== typeFilter) return false
     if (regionFilter !== 'all' && s.region !== regionFilter) return false
     if (tierFilter !== 'all' && s.tier !== Number(tierFilter)) return false
+    if (countryFilter !== 'all' && s.country !== countryFilter) return false
     return true
   })
 
-  const hasFilters = typeFilter !== 'all' || regionFilter !== 'all' || tierFilter !== 'all'
+  const hasFilters = typeFilter !== 'all' || regionFilter !== 'all' || tierFilter !== 'all' || countryFilter !== 'all'
   const displayed = hasFilters || showAll ? filtered : filtered.slice(0, DEFAULT_LIMIT)
   const hiddenCount = filtered.length - displayed.length
 
@@ -122,9 +125,20 @@ export function SourcesList({ sources, types, regions, tiers, brandKey }: Source
           ))}
         </select>
 
+        <select
+          value={countryFilter}
+          onChange={e => setCountryFilter(e.target.value)}
+          className="rounded-md border border-gray-300 dark:border-[var(--dark-border)] bg-white dark:bg-[var(--dark-surface)] text-gray-900 dark:text-[var(--dark-text)] px-3 py-1.5 text-sm"
+        >
+          <option value="all">All countries</option>
+          {countries.sort().map(c => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+
         {(hasFilters) && (
           <button
-            onClick={() => { setTypeFilter('all'); setRegionFilter('all'); setTierFilter('all') }}
+            onClick={() => { setTypeFilter('all'); setRegionFilter('all'); setTierFilter('all'); setCountryFilter('all') }}
             className="text-sm text-gray-500 dark:text-[var(--dark-muted)] hover:text-gray-700 dark:hover:text-[var(--dark-text)] underline"
           >
             Clear filters
