@@ -269,6 +269,26 @@ model DataSource {
   @@index([region])
 }
 
+model SocialPostQueue {
+  id            String   @id @default(cuid())
+  eventId       String
+  platform      String   // facebook, x, reddit, threads
+  brand         String   // ailayoffs, aicuts, ailayoffwatch, robotlayoffs
+  scheduledFor  DateTime // when to post
+  status        String   @default("pending") // pending, posted, failed, skipped
+  postContent   String?  // pre-built post text
+  postUrl       String?  // URL of the created post
+  platformPostId String? // ID returned by the platform
+  errorMessage  String?
+  attempts      Int      @default(0)
+  createdAt     DateTime @default(now())
+  postedAt      DateTime?
+
+  @@index([status, scheduledFor])
+  @@index([eventId])
+  @@unique([eventId, platform, brand])
+}
+
 model WeightConfig {
   id             String   @id @default(cuid())
   name           String   @unique

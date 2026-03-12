@@ -3,6 +3,7 @@ import { PrismaClient } from '@/generated/prisma'
 import { classifyArticle, ClassificationResult } from './classify'
 import { getQueriesForRun } from './search-queries'
 import { getSourceReputation } from './source-reputation'
+import { queuePostsForEvents } from '@/lib/social/queue-posts'
 
 // Normalize company name for dedup matching
 function normalizeCompanyName(name: string): string {
@@ -64,6 +65,8 @@ export async function runIngestionPipeline(
     eventsSkipped: 0,
     errors: [],
   }
+
+  const createdEventIds: string[] = []
 
   const exa = new Exa(process.env.EXA_API_KEY!)
 
@@ -307,6 +310,7 @@ export async function runIngestionPipeline(
             })
 
             result.eventsCreated++
+            createdEventIds.push(event.id)
             console.log(`NEW EVENT: [${classification.eventType}] ${classification.companyName} — ${jobCount} jobs (${classification.attributionCategory})`)
           } catch (e: any) {
             result.errors.push(`Event creation failed for ${item.url}: ${e.message}`)
@@ -332,6 +336,16 @@ export async function runIngestionPipeline(
         details: JSON.stringify(result),
       },
     })
+  }
+
+  // Queue social posts for any new events
+  if (createdEventIds.length > 0) {
+    try {
+      const queued = await queuePostsForEvents(prisma, createdEventIds)
+      console.log(`[SOCIAL] Queued ${queued} posts for ${createdEventIds.length} new events`)
+    } catch (e: any) {
+      console.error(`[SOCIAL] Failed to queue posts: ${e.message}`)
+    }
   }
 
   return result
