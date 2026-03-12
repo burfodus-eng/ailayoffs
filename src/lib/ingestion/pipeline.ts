@@ -150,6 +150,39 @@ export async function runIngestionPipeline(
             continue
           }
 
+          // ── Corroboration check for unknown sources ──
+          // If the source is unrecognized, search for a Tier 1/2 article about the same event
+          if (reputation.requiresCorroboration && classification.companyName) {
+            let corroborated = false
+            try {
+              const corrobQuery = `${classification.companyName} layoffs ${classification.jobCount ? classification.jobCount + ' jobs' : ''}`
+              const corrobResult = await exa.searchAndContents(corrobQuery, {
+                type: 'neural',
+                numResults: 5,
+                startPublishedDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                text: { maxCharacters: 500 },
+              })
+
+              for (const corrobItem of corrobResult.results) {
+                if (!corrobItem.url || corrobItem.url === item.url) continue
+                const corrobRep = getSourceReputation(corrobItem.url)
+                if (corrobRep.tier === 1 || corrobRep.tier === 2) {
+                  console.log(`CORROBORATED: ${classification.companyName} — found ${corrobRep.domain} (tier ${corrobRep.tier})`)
+                  corroborated = true
+                  break
+                }
+              }
+            } catch (e: any) {
+              console.log(`Corroboration search failed: ${e.message}`)
+            }
+
+            if (!corroborated) {
+              console.log(`SKIP (unknown source, no corroboration): ${classification.companyName} from ${reputation.domain}`)
+              result.eventsSkipped++
+              continue
+            }
+          }
+
           console.log(`[${reputation.tier}] ${reputation.domain} (score ${reputation.score}) — ${classification.companyName}: ${classification.jobCount || '?'} jobs`)
 
           // Fuzzy duplicate check: find recent events for similar company names
