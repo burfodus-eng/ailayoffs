@@ -162,6 +162,8 @@ export default function AnalyticsDashboard() {
   }
 
   const sites = data?.sites || []
+  const allSites = (data as any)?.allSites || sites
+  const totalSiteCount = (data as any)?.totalSiteCount || sites.length
   const totals = data?.totals || { pageviews: 0, visitors: 0, visits: 0, bounces: 0, totaltime: 0, active: 0 }
   const activeSite = selectedSite ? sites.find(s => s.id === selectedSite) : null
 
@@ -221,6 +223,9 @@ export default function AnalyticsDashboard() {
           <div className="flex items-center gap-3">
             <Activity className="h-5 w-5 text-blue-400" />
             <h1 className="text-sm font-bold">Analytics Dashboard</h1>
+            <span className="text-[11px] text-gray-500 font-medium px-2 py-0.5 bg-[#0f1117] border border-[#2a2b35] rounded-full">
+              {totalSiteCount} sites
+            </span>
             {totals.active > 0 && (
               <span className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 border border-green-500/20 rounded-full">
                 <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
@@ -278,7 +283,11 @@ export default function AnalyticsDashboard() {
           ))}
         </div>
 
-        {/* Site cards */}
+        {/* Site cards — top 8 by traffic for selected period */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Top Sites</span>
+          <span className="text-[10px] text-gray-600">({sites.length} of {totalSiteCount})</span>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {sites.map(site => (
             <button

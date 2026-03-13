@@ -4,15 +4,14 @@ const UMAMI_URL = 'https://umami-production-845c.up.railway.app'
 const UMAMI_USERNAME = process.env.UMAMI_ADMIN_USERNAME || 'admin'
 const UMAMI_PASSWORD = process.env.UMAMI_ADMIN_PASSWORD || ''
 
-const SITES = [
-  { id: '926a73bd-e2d9-4413-9949-32a638889802', name: 'AI Layoffs', domain: 'ailayoffs.com.au', color: '#ef4444' },
-  { id: '8506d74b-abab-4439-a375-78373368b4a1', name: 'AI Cuts', domain: 'aicuts.com.au', color: '#f59e0b' },
-  { id: 'f17098f0-7925-4678-b37c-a078d9ab2ca7', name: 'AI Layoff Watch', domain: 'ailayoffwatch.com', color: '#38bdf8' },
-  { id: '9e644b12-d780-45c3-91ad-62786cd2d461', name: 'AI Layoff Watch AU', domain: 'ailayoffwatch.com.au', color: '#06b6d4' },
-  { id: '7089fed7-475d-429e-b753-5912c96a9d0a', name: 'Robot Layoffs', domain: 'robotlayoffs.com', color: '#a78bfa' },
-  { id: 'cb93b879-8cf4-4e83-83ff-392dca006059', name: 'Robot Layoffs AU', domain: 'robotlayoffs.com.au', color: '#8b5cf6' },
-  { id: '2a232f1d-b4f6-40a1-baba-f4323538aa31', name: 'CentreTable', domain: 'centretable.com.au', color: '#22c55e' },
-  { id: '54052bff-0820-4dd2-bd8f-83246278c193', name: 'ShiftCanvas', domain: 'shiftcanvas.com.au', color: '#4ecdc4' },
+// Color palette for dynamically discovered sites
+const COLORS = [
+  '#ef4444', '#f59e0b', '#38bdf8', '#06b6d4', '#a78bfa', '#8b5cf6',
+  '#22c55e', '#4ecdc4', '#f97316', '#ec4899', '#14b8a6', '#6366f1',
+  '#84cc16', '#e11d48', '#0ea5e9', '#d946ef', '#facc15', '#fb923c',
+  '#34d399', '#818cf8', '#f472b6', '#a3e635', '#2dd4bf', '#c084fc',
+  '#fbbf24', '#38bdf8', '#4ade80', '#f87171', '#60a5fa', '#a78bfa',
+  '#fb7185', '#fcd34d', '#67e8f9', '#86efac', '#c4b5fd', '#fda4af',
 ]
 
 async function getToken(): Promise<string> {
@@ -35,6 +34,20 @@ async function fetchUmami(token: string, path: string, params: Record<string, st
   })
   if (!res.ok) return null
   return res.json()
+}
+
+async function getAllWebsites(token: string): Promise<{ id: string; name: string; domain: string; color: string }[]> {
+  // Fetch all websites from Umami (paginated, get up to 100)
+  const data = await fetchUmami(token, '/api/websites', { limit: '100', offset: '0' })
+  const websites = data?.data || data || []
+  if (!Array.isArray(websites)) return []
+
+  return websites.map((w: any, i: number) => ({
+    id: w.id,
+    name: w.name || w.domain,
+    domain: w.domain,
+    color: COLORS[i % COLORS.length],
+  }))
 }
 
 export async function GET(req: NextRequest) {
@@ -62,14 +75,37 @@ export async function GET(req: NextRequest) {
     const token = await getToken()
     const timeParams = { startAt: startAt.toString(), endAt: now.toString() }
 
-    const results = await Promise.all(
-      SITES.map(async (site) => {
+    // Dynamically fetch ALL websites from Umami
+    const allSites = await getAllWebsites(token)
+
+    // Fetch stats for ALL sites (lightweight — just stats + active)
+    const allResults = await Promise.all(
+      allSites.map(async (site) => {
+        const [stats, active] = await Promise.all([
+          fetchUmami(token, `/api/websites/${site.id}/stats`, timeParams),
+          fetchUmami(token, `/api/websites/${site.id}/active`),
+        ])
+        return {
+          ...site,
+          stats: stats || { pageviews: 0, visitors: 0, visits: 0, bounces: 0, totaltime: 0 },
+          active: active?.visitors || 0,
+        }
+      })
+    )
+
+    // Sort by visitors (descending) to find top 8
+    const sorted = [...allResults].sort((a, b) =>
+      (b.stats.visitors + b.stats.pageviews) - (a.stats.visitors + a.stats.pageviews)
+    )
+    const top8 = sorted.slice(0, 8)
+
+    // Fetch detailed data only for top 8 (pageviews chart, top pages, referrers, etc.)
+    const detailedResults = await Promise.all(
+      top8.map(async (site) => {
         const allTimeStart = new Date('2025-01-01T00:00:00Z').getTime().toString()
         const allTimeEnd = now.toString()
 
-        const [stats, active, pageviews, topPages, referrers, countries, browsers, os, devices, allTimePageviews] = await Promise.all([
-          fetchUmami(token, `/api/websites/${site.id}/stats`, timeParams),
-          fetchUmami(token, `/api/websites/${site.id}/active`),
+        const [pageviews, topPages, referrers, countries, browsers, os, devices, allTimePageviews] = await Promise.all([
           fetchUmami(token, `/api/websites/${site.id}/pageviews`, { ...timeParams, unit }),
           fetchUmami(token, `/api/websites/${site.id}/metrics`, { ...timeParams, type: 'path', limit: '10' }),
           fetchUmami(token, `/api/websites/${site.id}/metrics`, { ...timeParams, type: 'referrer', limit: '10' }),
@@ -82,8 +118,6 @@ export async function GET(req: NextRequest) {
 
         return {
           ...site,
-          stats: stats || { pageviews: 0, visitors: 0, visits: 0, bounces: 0, totaltime: 0 },
-          active: active?.visitors || 0,
           pageviews: pageviews || { pageviews: [], sessions: [] },
           topPages: topPages || [],
           referrers: referrers || [],
@@ -96,8 +130,8 @@ export async function GET(req: NextRequest) {
       })
     )
 
-    // Compute totals
-    const totals = results.reduce(
+    // Compute totals from ALL sites (not just top 8)
+    const totals = allResults.reduce(
       (acc, s) => ({
         pageviews: acc.pageviews + (s.stats.pageviews || 0),
         visitors: acc.visitors + (s.stats.visitors || 0),
@@ -109,7 +143,13 @@ export async function GET(req: NextRequest) {
       { pageviews: 0, visitors: 0, visits: 0, bounces: 0, totaltime: 0, active: 0 }
     )
 
-    return NextResponse.json({ sites: results, totals, period })
+    return NextResponse.json({
+      sites: detailedResults,
+      allSites: allResults, // lightweight data for all sites (for combined chart)
+      totals,
+      period,
+      totalSiteCount: allResults.length,
+    })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
