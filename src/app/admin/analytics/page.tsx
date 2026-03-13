@@ -590,6 +590,50 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
 
+        {/* All Domains Table — 3 columns */}
+        {allSites.length > 0 && (
+          <div className="bg-[#1a1b23] border border-[#2a2b35] rounded-lg p-4 mb-6">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
+              <Globe className="h-3.5 w-3.5 text-blue-400" />
+              All Domains ({allSites.length})
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-0">
+              {[...allSites]
+                .sort((a: any, b: any) => (b.statsAllTime?.pageviews || 0) - (a.statsAllTime?.pageviews || 0))
+                .map((site: any) => (
+                  <div
+                    key={site.id}
+                    className="flex items-center justify-between py-1.5 border-b border-[#2a2b35]/50 last:border-0"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: site.color }} />
+                      <span className="text-[11px] text-gray-300 truncate" title={site.domain}>
+                        {site.domain}
+                      </span>
+                      {site.active > 0 && (
+                        <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse flex-shrink-0" />
+                      )}
+                    </div>
+                    <div className="flex gap-3 text-[10px] tabular-nums flex-shrink-0 ml-2">
+                      <span className="text-gray-500" title="24h views">
+                        <span className="text-gray-600 mr-0.5">24h</span>
+                        {(site.stats24h?.pageviews || 0).toLocaleString()}
+                      </span>
+                      <span className="text-gray-500" title="7d views">
+                        <span className="text-gray-600 mr-0.5">7d</span>
+                        {(site.stats7d?.pageviews || 0).toLocaleString()}
+                      </span>
+                      <span className="text-gray-400 font-medium" title="All time views">
+                        <span className="text-gray-600 mr-0.5">all</span>
+                        {fmt(site.statsAllTime?.pageviews || 0)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
         <p className="text-center text-[10px] text-gray-600 pb-4">
           Powered by Umami · Auto-refreshes every 60s when enabled
         </p>

@@ -78,17 +78,28 @@ export async function GET(req: NextRequest) {
     // Dynamically fetch ALL websites from Umami
     const allSites = await getAllWebsites(token)
 
-    // Fetch stats for ALL sites (lightweight — just stats + active)
+    // Time ranges for the domain table
+    const day24h = { startAt: (now - 24 * 60 * 60 * 1000).toString(), endAt: now.toString() }
+    const day7d = { startAt: (now - 7 * 24 * 60 * 60 * 1000).toString(), endAt: now.toString() }
+    const allTimeRange = { startAt: new Date('2025-01-01T00:00:00Z').getTime().toString(), endAt: now.toString() }
+
+    // Fetch stats for ALL sites — current period + 24h + 7d + all-time
     const allResults = await Promise.all(
       allSites.map(async (site) => {
-        const [stats, active] = await Promise.all([
+        const [stats, active, stats24h, stats7d, statsAllTime] = await Promise.all([
           fetchUmami(token, `/api/websites/${site.id}/stats`, timeParams),
           fetchUmami(token, `/api/websites/${site.id}/active`),
+          period !== '24h' ? fetchUmami(token, `/api/websites/${site.id}/stats`, day24h) : null,
+          period !== '7d' ? fetchUmami(token, `/api/websites/${site.id}/stats`, day7d) : null,
+          fetchUmami(token, `/api/websites/${site.id}/stats`, allTimeRange),
         ])
         return {
           ...site,
           stats: stats || { pageviews: 0, visitors: 0, visits: 0, bounces: 0, totaltime: 0 },
           active: active?.visitors || 0,
+          stats24h: (period === '24h' ? stats : stats24h) || { pageviews: 0, visitors: 0 },
+          stats7d: (period === '7d' ? stats : stats7d) || { pageviews: 0, visitors: 0 },
+          statsAllTime: statsAllTime || { pageviews: 0, visitors: 0 },
         }
       })
     )
