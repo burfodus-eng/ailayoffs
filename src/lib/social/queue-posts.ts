@@ -16,6 +16,13 @@ import { PrismaClient } from '@/generated/prisma'
 
 type BrandKey = 'ailayoffs' | 'aicuts' | 'ailayoffwatch' | 'robotlayoffs'
 
+const BRAND_DOMAINS: Record<BrandKey, string> = {
+  ailayoffs: 'https://ailayoffs.com.au',
+  aicuts: 'https://aicuts.com.au',
+  ailayoffwatch: 'https://ailayoffwatch.com',
+  robotlayoffs: 'https://robotlayoffs.com',
+}
+
 interface PostSlot {
   platform: string
   brand: BrandKey
@@ -55,7 +62,8 @@ function buildEventPostText(event: {
   country: string | null
   industry: string | null
   dateAnnounced: Date | null
-}, platform: string): string {
+  slug?: string | null
+}, platform: string, brand?: BrandKey): string {
   const company = event.companyName || 'Unknown Company'
   const jobs = event.jobsCutAnnounced
   const summary = event.publicSummary || ''
@@ -97,6 +105,13 @@ function buildEventPostText(event: {
     parts.push('')
   }
 
+  // Add link to the article on the brand's domain
+  if (brand && BRAND_DOMAINS[brand]) {
+    const slug = event.slug || company.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    parts.push(`Read more: ${BRAND_DOMAINS[brand]}/event/${slug}`)
+    parts.push('')
+  }
+
   if (event.eventType === 'ROBOT_LAYOFF') {
     parts.push('#RobotLayoffs #Automation #Robotics #FutureOfWork')
   } else {
@@ -131,7 +146,7 @@ export async function queuePostsForEvents(
 
     for (const slot of relevantSlots) {
       const scheduledFor = new Date(now.getTime() + slot.offsetMinutes * 60 * 1000)
-      const postContent = buildEventPostText(event, slot.platform)
+      const postContent = buildEventPostText(event, slot.platform, slot.brand)
 
       try {
         await prisma.socialPostQueue.create({
