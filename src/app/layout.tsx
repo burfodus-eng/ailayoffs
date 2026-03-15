@@ -83,13 +83,11 @@ export async function generateMetadata(): Promise<Metadata> {
       type: 'website',
       siteName: brand.name,
       url: origin,
-      images: [{ url: `${origin}/opengraph-image`, width: 1200, height: 630, alt: brand.name }],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${brand.name} — ${brand.tagline}`,
       description: brand.description,
-      images: [`${origin}/opengraph-image`],
     },
     robots: {
       index: true,
