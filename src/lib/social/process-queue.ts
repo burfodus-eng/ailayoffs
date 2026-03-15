@@ -28,13 +28,27 @@ async function postToFacebook(
     throw new Error(`Missing FB_${key}_PAGE_TOKEN or FB_${key}_PAGE_ID`)
   }
 
+  // Extract link from post content (e.g. "Read more: https://...")
+  const linkMatch = content.match(/Read more: (https:\/\/\S+)/)
+  const link = linkMatch?.[1]
+
+  // Remove the "Read more:" line from the message since Facebook will show the link preview
+  const message = link
+    ? content.replace(/\nRead more: https:\/\/\S+\n?/, '\n')
+    : content
+
+  const body: Record<string, string> = {
+    message: message.trim(),
+    access_token: pageToken,
+  }
+  if (link) {
+    body.link = link
+  }
+
   const res = await fetch(`https://graph.facebook.com/v21.0/${pageId}/feed`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message: content,
-      access_token: pageToken,
-    }),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {

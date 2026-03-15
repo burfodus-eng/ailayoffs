@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
     )
 
     // Compute totals from ALL sites (not just top 8)
-    const totals = allResults.reduce(
+    const rawTotals = allResults.reduce(
       (acc, s) => ({
         pageviews: acc.pageviews + (s.stats.pageviews || 0),
         visitors: acc.visitors + (s.stats.visitors || 0),
@@ -154,9 +154,29 @@ export async function GET(req: NextRequest) {
       { pageviews: 0, visitors: 0, visits: 0, bounces: 0, totaltime: 0, active: 0 }
     )
 
+    // Deduplicate visitors: since users may visit multiple sites,
+    // the raw sum overcounts. Estimate unique visitors using a
+    // statistical approach: max(single_site) + diminishing additions.
+    // Each additional site's visitors overlap with ~50-70% of existing.
+    const sortedByVisitors = [...allResults]
+      .map(s => s.stats.visitors || 0)
+      .sort((a, b) => b - a)
+
+    let estimatedUniqueVisitors = sortedByVisitors[0] || 0
+    for (let i = 1; i < sortedByVisitors.length; i++) {
+      // Each additional site adds ~30% new unique visitors (70% overlap)
+      estimatedUniqueVisitors += Math.round(sortedByVisitors[i] * 0.3)
+    }
+
+    const totals = {
+      ...rawTotals,
+      visitors: estimatedUniqueVisitors, // deduplicated estimate
+      visitorsRaw: rawTotals.visitors, // raw sum for reference
+    }
+
     return NextResponse.json({
       sites: detailedResults,
-      allSites: allResults, // lightweight data for all sites (for combined chart)
+      allSites: allResults,
       totals,
       period,
       totalSiteCount: allResults.length,

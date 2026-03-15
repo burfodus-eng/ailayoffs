@@ -25,6 +25,7 @@ interface EventData {
   upperAiJobs: number
   attributionCategory: string
   publicSummary: string | null
+  coverImageUrl: string | null
   articleEvents: { article: ArticleData; isPrimary: boolean }[]
 }
 
@@ -51,7 +52,15 @@ export function EventDetailClient({ event }: { event: EventData }) {
         <ArrowLeft className="h-4 w-4" /> Back to News
       </Link>
 
-      <div className="border rounded-lg bg-card p-6 md:p-8">
+      <div className="border rounded-lg bg-card overflow-hidden">
+        {/* Hero Image */}
+        {event.coverImageUrl && (
+          <div className="relative w-full h-48 md:h-64">
+            <img src={event.coverImageUrl} alt={event.companyName || 'Event'} className="w-full h-full object-cover" />
+          </div>
+        )}
+
+        <div className="p-6 md:p-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded ${categoryStyle(event.attributionCategory)}`}>
@@ -133,6 +142,7 @@ export function EventDetailClient({ event }: { event: EventData }) {
               </div>
             ))}
           </div>
+        </div>
         </div>
       </div>
     </div>

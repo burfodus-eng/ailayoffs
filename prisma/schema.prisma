@@ -80,6 +80,8 @@ model Article {
 
 model Event {
   id                         String              @id @default(cuid())
+  slug                       String?             @unique
+  coverImageUrl              String?
   eventType                  EventType
   companyId                  String?
   company                    Company?            @relation(fields: [companyId], references: [id])
