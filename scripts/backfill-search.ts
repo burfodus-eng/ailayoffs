@@ -87,7 +87,7 @@ async function main() {
       for (const item of result.results) {
         if (!existingUrls.has(item.url) && !allNew.find(a => a.url === item.url)) {
           allNew.push({
-            title: item.title,
+            title: item.title || '',
             url: item.url,
             date: item.publishedDate?.substring(0, 10) || null,
             text: item.text || null,
