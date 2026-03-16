@@ -212,9 +212,16 @@ export async function runIngestionPipeline(
             select: { id: true, companyName: true, jobsCutAnnounced: true },
           })
 
-          const duplicateCheck = potentialDuplicates.find(existing =>
-            existing.companyName && isSameCompany(existing.companyName, classification.companyName!)
-          )
+          const duplicateCheck = potentialDuplicates.find(existing => {
+            if (!existing.companyName || !isSameCompany(existing.companyName, classification.companyName!)) return false
+            // If both have job counts and they differ by more than 50%, treat as separate events
+            if (existing.jobsCutAnnounced && classification.jobCount) {
+              const ratio = Math.max(existing.jobsCutAnnounced, classification.jobCount) /
+                            Math.min(existing.jobsCutAnnounced, classification.jobCount)
+              if (ratio > 2) return false // e.g. 1,500 vs 16,000 = clearly different
+            }
+            return true
+          })
 
           if (duplicateCheck) {
             // Link article to existing event instead of creating new one
