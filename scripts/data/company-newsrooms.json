@@ -1,0 +1,522 @@
+[
+  {
+    "company": "Alphabet (Google)",
+    "domain": "blog.google",
+    "newsroomUrl": "https://blog.google/press/",
+    "irUrl": "https://abc.xyz/investor/",
+    "rssUrl": "https://blog.google/rss/",
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Amazon",
+    "domain": "aboutamazon.com",
+    "newsroomUrl": "https://press.aboutamazon.com/",
+    "irUrl": "https://ir.aboutamazon.com/",
+    "rssUrl": "https://www.aboutamazon.com/news/rss",
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Apple",
+    "domain": "apple.com",
+    "newsroomUrl": "https://www.apple.com/newsroom/",
+    "irUrl": "https://investor.apple.com/",
+    "rssUrl": "https://www.apple.com/newsroom/rss-feed.rss",
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Meta",
+    "domain": "about.fb.com",
+    "newsroomUrl": "https://about.fb.com/news/",
+    "irUrl": "https://investor.fb.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Microsoft",
+    "domain": "news.microsoft.com",
+    "newsroomUrl": "https://news.microsoft.com/source/",
+    "irUrl": "https://www.microsoft.com/en-us/investor",
+    "rssUrl": "https://blogs.microsoft.com/feed/",
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Netflix",
+    "domain": "netflix.com",
+    "newsroomUrl": "https://about.netflix.com/newsroom",
+    "irUrl": "https://ir.netflix.net/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "NVIDIA",
+    "domain": "nvidia.com",
+    "newsroomUrl": "https://nvidianews.nvidia.com/",
+    "irUrl": "https://investor.nvidia.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Salesforce",
+    "domain": "salesforce.com",
+    "newsroomUrl": "https://www.salesforce.com/news/",
+    "irUrl": "https://investor.salesforce.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Oracle",
+    "domain": "oracle.com",
+    "newsroomUrl": "https://www.oracle.com/news/",
+    "irUrl": "https://investor.oracle.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "SAP",
+    "domain": "news.sap.com",
+    "newsroomUrl": "https://news.sap.com/",
+    "irUrl": "https://www.sap.com/investors/en.html",
+    "rssUrl": "https://news.sap.com/feed/",
+    "pageType": "press_releases"
+  },
+  {
+    "company": "IBM",
+    "domain": "newsroom.ibm.com",
+    "newsroomUrl": "https://newsroom.ibm.com/",
+    "irUrl": "https://www.ibm.com/investor",
+    "rssUrl": "https://newsroom.ibm.com/rss",
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Intel",
+    "domain": "intel.com",
+    "newsroomUrl": "https://newsroom.intel.com/",
+    "irUrl": "https://www.intc.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Cisco",
+    "domain": "newsroom.cisco.com",
+    "newsroomUrl": "https://newsroom.cisco.com/",
+    "irUrl": "https://investor.cisco.com/",
+    "rssUrl": "https://newsroom.cisco.com/c/r/newsroom/en/us/rss.html",
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Adobe",
+    "domain": "news.adobe.com",
+    "newsroomUrl": "https://news.adobe.com/",
+    "irUrl": "https://www.adobe.com/investor-relations/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Dell Technologies",
+    "domain": "dell.com",
+    "newsroomUrl": "https://www.dell.com/en-us/dt/corporate/newsroom.htm",
+    "irUrl": "https://investors.delltechnologies.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Hewlett Packard Enterprise",
+    "domain": "hpe.com",
+    "newsroomUrl": "https://www.hpe.com/us/en/newsroom.html",
+    "irUrl": "https://investors.hpe.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "HP Inc.",
+    "domain": "hp.com",
+    "newsroomUrl": "https://press.hp.com/",
+    "irUrl": "https://investor.hp.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Qualcomm",
+    "domain": "qualcomm.com",
+    "newsroomUrl": "https://www.qualcomm.com/news/releases",
+    "irUrl": "https://investor.qualcomm.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Tesla",
+    "domain": "tesla.com",
+    "newsroomUrl": "https://ir.tesla.com/press",
+    "irUrl": "https://ir.tesla.com/",
+    "rssUrl": null,
+    "pageType": "ir_page"
+  },
+  {
+    "company": "Palantir",
+    "domain": "palantir.com",
+    "newsroomUrl": "https://www.palantir.com/newsroom/",
+    "irUrl": "https://investors.palantir.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "ServiceNow",
+    "domain": "servicenow.com",
+    "newsroomUrl": "https://www.servicenow.com/company/media/press-room.html",
+    "irUrl": "https://investor.servicenow.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Workday",
+    "domain": "workday.com",
+    "newsroomUrl": "https://investor.workday.com/news-and-events/press-releases/",
+    "irUrl": "https://investor.workday.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "UiPath",
+    "domain": "uipath.com",
+    "newsroomUrl": "https://www.uipath.com/newsroom",
+    "irUrl": "https://ir.uipath.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Spotify",
+    "domain": "spotify.com",
+    "newsroomUrl": "https://newsroom.spotify.com/",
+    "irUrl": "https://investors.spotify.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Shopify",
+    "domain": "shopify.com",
+    "newsroomUrl": "https://www.shopify.com/news",
+    "irUrl": "https://shopifyinvestors.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Snap Inc.",
+    "domain": "snap.com",
+    "newsroomUrl": "https://newsroom.snap.com/",
+    "irUrl": "https://investor.snap.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Uber",
+    "domain": "uber.com",
+    "newsroomUrl": "https://www.uber.com/newsroom/",
+    "irUrl": "https://investor.uber.com/",
+    "rssUrl": null,
+    "pageType": "blog"
+  },
+  {
+    "company": "Lyft",
+    "domain": "lyft.com",
+    "newsroomUrl": "https://www.lyft.com/press",
+    "irUrl": "https://investor.lyft.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Dropbox",
+    "domain": "dropbox.com",
+    "newsroomUrl": "https://blog.dropbox.com/",
+    "irUrl": "https://investors.dropbox.com/",
+    "rssUrl": "https://blog.dropbox.com/feed/",
+    "pageType": "blog"
+  },
+  {
+    "company": "Zoom",
+    "domain": "zoom.us",
+    "newsroomUrl": "https://news.zoom.us/",
+    "irUrl": "https://investors.zoom.us/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Twilio",
+    "domain": "twilio.com",
+    "newsroomUrl": "https://investors.twilio.com/news-events/news-releases",
+    "irUrl": "https://investors.twilio.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Stripe",
+    "domain": "stripe.com",
+    "newsroomUrl": "https://stripe.com/newsroom",
+    "irUrl": null,
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Klarna",
+    "domain": "klarna.com",
+    "newsroomUrl": "https://www.klarna.com/international/press/",
+    "irUrl": "https://investors.klarna.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Chegg",
+    "domain": "chegg.com",
+    "newsroomUrl": "https://investor.chegg.com/Press-Releases/",
+    "irUrl": "https://investor.chegg.com/",
+    "rssUrl": null,
+    "pageType": "ir_page"
+  },
+  {
+    "company": "Duolingo",
+    "domain": "duolingo.com",
+    "newsroomUrl": "https://blog.duolingo.com/",
+    "irUrl": "https://investors.duolingo.com/",
+    "rssUrl": null,
+    "pageType": "blog"
+  },
+  {
+    "company": "JPMorgan Chase",
+    "domain": "jpmorganchase.com",
+    "newsroomUrl": "https://www.jpmorganchase.com/newsroom",
+    "irUrl": "https://www.jpmorganchase.com/ir",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Goldman Sachs",
+    "domain": "goldmansachs.com",
+    "newsroomUrl": "https://www.goldmansachs.com/pressroom",
+    "irUrl": "https://www.goldmansachs.com/investor-relations",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Morgan Stanley",
+    "domain": "morganstanley.com",
+    "newsroomUrl": "https://www.morganstanley.com/about-us-newsroom",
+    "irUrl": "https://www.morganstanley.com/about-us-ir",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Citigroup",
+    "domain": "citigroup.com",
+    "newsroomUrl": "https://www.citigroup.com/global/news/press-release",
+    "irUrl": "https://www.citigroup.com/global/investors",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Bank of America",
+    "domain": "bankofamerica.com",
+    "newsroomUrl": "https://newsroom.bankofamerica.com/",
+    "irUrl": "https://investor.bankofamerica.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Deutsche Bank",
+    "domain": "db.com",
+    "newsroomUrl": "https://www.db.com/media/",
+    "irUrl": "https://investor-relations.db.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "HSBC",
+    "domain": "hsbc.com",
+    "newsroomUrl": "https://www.hsbc.com/news-and-views/news/media-releases",
+    "irUrl": "https://www.hsbc.com/investors",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Barclays",
+    "domain": "barclays.com",
+    "newsroomUrl": "https://newsroom.barclays.com/",
+    "irUrl": "https://home.barclays/investor-relations/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Accenture",
+    "domain": "newsroom.accenture.com",
+    "newsroomUrl": "https://newsroom.accenture.com/",
+    "irUrl": "https://investor.accenture.com/",
+    "rssUrl": "https://newsroom.accenture.com/rss/",
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Deloitte",
+    "domain": "deloitte.com",
+    "newsroomUrl": "https://www.deloitte.com/global/en/about/press-room.html",
+    "irUrl": null,
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "PwC",
+    "domain": "pwc.com",
+    "newsroomUrl": "https://www.pwc.com/gx/en/news-room.html",
+    "irUrl": null,
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "KPMG",
+    "domain": "kpmg.com",
+    "newsroomUrl": "https://kpmg.com/xx/en/media/press-releases.html",
+    "irUrl": null,
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "EY (Ernst & Young)",
+    "domain": "ey.com",
+    "newsroomUrl": "https://www.ey.com/en_gl/newsroom",
+    "irUrl": null,
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "McKinsey & Company",
+    "domain": "mckinsey.com",
+    "newsroomUrl": "https://www.mckinsey.com/about-us/media",
+    "irUrl": null,
+    "rssUrl": null,
+    "pageType": "blog"
+  },
+  {
+    "company": "BCG (Boston Consulting Group)",
+    "domain": "bcg.com",
+    "newsroomUrl": "https://www.bcg.com/about/corporate-newsroom",
+    "irUrl": null,
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Infosys",
+    "domain": "infosys.com",
+    "newsroomUrl": "https://www.infosys.com/newsroom/press-releases.html",
+    "irUrl": "https://www.infosys.com/investors.html",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "TCS (Tata Consultancy Services)",
+    "domain": "tcs.com",
+    "newsroomUrl": "https://www.tcs.com/who-we-are/newsroom",
+    "irUrl": "https://www.tcs.com/investor-relations",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Wipro",
+    "domain": "wipro.com",
+    "newsroomUrl": "https://www.wipro.com/newsroom/",
+    "irUrl": "https://www.wipro.com/investors/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Cognizant",
+    "domain": "cognizant.com",
+    "newsroomUrl": "https://investors.cognizant.com/news-and-events/news/",
+    "irUrl": "https://investors.cognizant.com/",
+    "rssUrl": null,
+    "pageType": "ir_page"
+  },
+  {
+    "company": "BT Group",
+    "domain": "bt.com",
+    "newsroomUrl": "https://newsroom.bt.com/",
+    "irUrl": "https://www.bt.com/about/investors",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Ericsson",
+    "domain": "ericsson.com",
+    "newsroomUrl": "https://www.ericsson.com/en/newsroom",
+    "irUrl": "https://www.ericsson.com/en/investors",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Vodafone",
+    "domain": "vodafone.com",
+    "newsroomUrl": "https://www.vodafone.com/news",
+    "irUrl": "https://investors.vodafone.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Nokia",
+    "domain": "nokia.com",
+    "newsroomUrl": "https://www.nokia.com/about-us/newsroom/press-and-stock-exchange-releases/",
+    "irUrl": "https://www.nokia.com/about-us/investors/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "AT&T",
+    "domain": "att.com",
+    "newsroomUrl": "https://about.att.com/",
+    "irUrl": "https://investors.att.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Verizon",
+    "domain": "verizon.com",
+    "newsroomUrl": "https://www.verizon.com/about/news/press-releases",
+    "irUrl": "https://www.verizon.com/about/investors",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "T-Mobile",
+    "domain": "t-mobile.com",
+    "newsroomUrl": "https://www.t-mobile.com/news",
+    "irUrl": "https://investor.t-mobile.com/",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Siemens",
+    "domain": "siemens.com",
+    "newsroomUrl": "https://press.siemens.com/",
+    "irUrl": "https://www.siemens.com/global/en/company/investor-relations.html",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "BMW Group",
+    "domain": "bmwgroup.com",
+    "newsroomUrl": "https://www.press.bmwgroup.com/global",
+    "irUrl": "https://www.bmwgroup.com/en/investor-relations.html",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Foxconn (Hon Hai)",
+    "domain": "foxconn.com",
+    "newsroomUrl": "https://www.foxconn.com/en-us/press-center/press-releases/latest-news",
+    "irUrl": "https://www.foxconn.com/en-us/investor-relations",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  },
+  {
+    "company": "Panasonic",
+    "domain": "panasonic.com",
+    "newsroomUrl": "https://news.panasonic.com/global/",
+    "irUrl": "https://holdings.panasonic/global/corporate/investors.html",
+    "rssUrl": null,
+    "pageType": "press_releases"
+  }
+]
