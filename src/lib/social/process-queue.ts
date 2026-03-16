@@ -112,7 +112,7 @@ async function postToPlatform(
 export async function processPostQueue(prisma: PrismaClient): Promise<PostResult> {
   const result: PostResult = { processed: 0, posted: 0, failed: 0, skipped: 0 }
 
-  // Find all pending posts whose scheduled time has passed, include event image
+  // Find all pending posts whose scheduled time has passed
   const duePosts = await prisma.socialPostQueue.findMany({
     where: {
       status: 'pending',
@@ -120,11 +120,6 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
       attempts: { lt: MAX_ATTEMPTS },
     },
     orderBy: { scheduledFor: 'asc' },
-    include: {
-      event: {
-        select: { coverImageUrl: true },
-      },
-    },
   })
 
   if (duePosts.length === 0) return result
@@ -144,7 +139,16 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
     }
 
     try {
-      const imageUrl = (post as any).event?.coverImageUrl || null
+      // Look up event image separately (avoids Prisma relation dependency)
+      let imageUrl: string | null = null
+      try {
+        const event = await prisma.event.findUnique({
+          where: { id: post.eventId },
+          select: { coverImageUrl: true },
+        })
+        imageUrl = event?.coverImageUrl || null
+      } catch { /* ignore if event lookup fails */ }
+
       const { postId } = await postToPlatform(post.platform, post.brand, post.postContent, imageUrl)
 
       await prisma.socialPostQueue.update({
