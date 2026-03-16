@@ -1,5 +1,6 @@
 /**
  * Process the social post queue — posts any items whose scheduledFor has passed.
+ * Uses Facebook /photos endpoint for posts with images (direct image upload).
  */
 
 import { PrismaClient } from '@/generated/prisma'
@@ -15,10 +16,13 @@ interface PostResult {
 
 /**
  * Post to Facebook Graph API.
+ * Uses /photos endpoint when an image URL is available (shows image directly in feed).
+ * Falls back to /feed with link parameter for posts without images.
  */
 async function postToFacebook(
   brand: string,
   content: string,
+  imageUrl?: string | null,
 ): Promise<{ postId: string }> {
   const key = brand.toUpperCase()
   const pageToken = process.env[`FB_${key}_PAGE_TOKEN`]
@@ -28,22 +32,47 @@ async function postToFacebook(
     throw new Error(`Missing FB_${key}_PAGE_TOKEN or FB_${key}_PAGE_ID`)
   }
 
-  // Extract link from post content (e.g. "Read more: https://...")
+  // Extract link from post content
   const linkMatch = content.match(/Read more: (https:\/\/\S+)/)
   const link = linkMatch?.[1]
 
-  // Remove the "Read more:" line from the message since Facebook will show the link preview
-  const message = link
-    ? content.replace(/\nRead more: https:\/\/\S+\n?/, '\n')
-    : content
+  // Remove the "Read more:" line from the message
+  let message = link
+    ? content.replace(/\nRead more: https:\/\/\S+\n?/, '\n').trim()
+    : content.trim()
 
+  // Add link back as a clickable line for /photos posts
+  if (link) {
+    message += `\n\n🔗 Read more: ${link}`
+  }
+
+  if (imageUrl) {
+    // Post as photo with image — shows image directly in feed
+    const res = await fetch(`https://graph.facebook.com/v21.0/${pageId}/photos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: imageUrl,
+        message,
+        access_token: pageToken,
+      }),
+    })
+
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(`Facebook API: ${JSON.stringify(err.error?.message || err)}`)
+    }
+
+    const data = await res.json() as { id: string }
+    return { postId: data.id }
+  }
+
+  // Fallback: post to /feed with link
   const body: Record<string, string> = {
-    message: message.trim(),
+    message,
     access_token: pageToken,
   }
-  if (link) {
-    body.link = link
-  }
+  if (link) body.link = link
 
   const res = await fetch(`https://graph.facebook.com/v21.0/${pageId}/feed`, {
     method: 'POST',
@@ -67,14 +96,11 @@ async function postToPlatform(
   platform: string,
   brand: string,
   content: string,
+  imageUrl?: string | null,
 ): Promise<{ postId: string }> {
   switch (platform) {
     case 'facebook':
-      return postToFacebook(brand, content)
-    // Future platforms:
-    // case 'threads': return postToThreads(brand, content)
-    // case 'x': return postToX(brand, content)
-    // case 'reddit': return postToReddit(brand, content)
+      return postToFacebook(brand, content, imageUrl)
     default:
       throw new Error(`Unknown platform: ${platform}`)
   }
@@ -86,7 +112,7 @@ async function postToPlatform(
 export async function processPostQueue(prisma: PrismaClient): Promise<PostResult> {
   const result: PostResult = { processed: 0, posted: 0, failed: 0, skipped: 0 }
 
-  // Find all pending posts whose scheduled time has passed
+  // Find all pending posts whose scheduled time has passed, include event image
   const duePosts = await prisma.socialPostQueue.findMany({
     where: {
       status: 'pending',
@@ -94,6 +120,11 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
       attempts: { lt: MAX_ATTEMPTS },
     },
     orderBy: { scheduledFor: 'asc' },
+    include: {
+      event: {
+        select: { coverImageUrl: true },
+      },
+    },
   })
 
   if (duePosts.length === 0) return result
@@ -113,7 +144,8 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
     }
 
     try {
-      const { postId } = await postToPlatform(post.platform, post.brand, post.postContent)
+      const imageUrl = (post as any).event?.coverImageUrl || null
+      const { postId } = await postToPlatform(post.platform, post.brand, post.postContent, imageUrl)
 
       await prisma.socialPostQueue.update({
         where: { id: post.id },
@@ -128,7 +160,7 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
       console.log(`[POSTED] ${post.platform}/${post.brand} — ${postId}`)
       result.posted++
 
-      // Rate limit: 2s between posts to the same platform
+      // Rate limit: 2s between posts
       await new Promise(r => setTimeout(r, 2000))
     } catch (e: any) {
       const newAttempts = post.attempts + 1

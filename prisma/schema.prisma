@@ -117,6 +117,7 @@ model Event {
   lastReviewedAt             DateTime?
   articleEvents              ArticleEvent[]
   revisions                  EventRevision[]
+  socialPosts                SocialPostQueue[]
   createdAt                  DateTime            @default(now())
   updatedAt                  DateTime            @updatedAt
 
@@ -274,6 +275,7 @@ model DataSource {
 model SocialPostQueue {
   id            String   @id @default(cuid())
   eventId       String
+  event         Event    @relation(fields: [eventId], references: [id])
   platform      String   // facebook, x, reddit, threads
   brand         String   // ailayoffs, aicuts, ailayoffwatch, robotlayoffs
   scheduledFor  DateTime // when to post

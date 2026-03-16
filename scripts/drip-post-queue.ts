@@ -1,5 +1,6 @@
 /**
  * Drip-feed the social post queue — posts a small batch, then waits.
+ * Uses /photos endpoint with direct image upload (not OG link previews).
  *
  * Usage:
  *   npx tsx scripts/drip-post-queue.ts                    # 10 per batch, 60 min interval
@@ -19,24 +20,32 @@ const intervalIdx = args.indexOf('--interval')
 const INTERVAL_MIN = intervalIdx !== -1 ? parseInt(args[intervalIdx + 1]) : 60
 const ONCE = args.includes('--once')
 
-async function postToFB(brand: string, content: string): Promise<string> {
+async function postToFB(
+  brand: string,
+  message: string,
+  link: string | null,
+  imageUrl: string | null,
+): Promise<string> {
   const key = brand.toUpperCase()
   const token = process.env[`FB_${key}_PAGE_TOKEN`]
   const pageId = process.env[`FB_${key}_PAGE_ID`]
   if (!token || !pageId) throw new Error(`Missing token/id for ${brand}`)
 
-  const linkMatch = content.match(/Read more: (https:\/\/\S+)/)
-  const link = linkMatch?.[1]
-  const message = link
-    ? content.replace(/\nRead more: https:\/\/\S+\n?/, '\n').trim()
-    : content
-
-  const body: Record<string, string> = { message, access_token: token }
-  if (link) body.link = link
+  const fullMessage = link ? message + `\n\n🔗 Read more: ${link}` : message
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const res = await fetch(`https://graph.facebook.com/v21.0/${pageId}/feed`, {
+      // Use /photos if we have an image (shows image directly in feed)
+      // Otherwise /feed with link (shows OG link preview)
+      const endpoint = imageUrl ? `${pageId}/photos` : `${pageId}/feed`
+      const body: Record<string, string> = { message: fullMessage, access_token: token }
+      if (imageUrl) {
+        body.url = imageUrl
+      } else if (link) {
+        body.link = link
+      }
+
+      const res = await fetch(`https://graph.facebook.com/v21.0/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -64,9 +73,12 @@ async function postToFB(brand: string, content: string): Promise<string> {
 }
 
 async function postBatch(pool: any): Promise<{ posted: number; failed: number; remaining: number }> {
+  // Fetch pending posts with their event's cover image
   const pending = await pool.query(
-    `SELECT id, brand, "postContent" FROM "SocialPostQueue"
-     WHERE status = 'pending' ORDER BY "scheduledFor" ASC LIMIT $1`,
+    `SELECT q.id, q.brand, q."postContent", e."coverImageUrl", e.slug
+     FROM "SocialPostQueue" q
+     JOIN "Event" e ON e.id = q."eventId"
+     WHERE q.status = 'pending' ORDER BY q."scheduledFor" ASC LIMIT $1`,
     [BATCH_SIZE]
   )
 
@@ -84,7 +96,15 @@ async function postBatch(pool: any): Promise<{ posted: number; failed: number; r
 
   for (const row of pending.rows) {
     try {
-      const fbId = await postToFB(row.brand, row.postContent)
+      // Extract link from content
+      const linkMatch = row.postContent?.match(/Read more: (https:\/\/\S+)/)
+      const link = linkMatch?.[1] || null
+      // Remove the "Read more" line from the message body
+      const message = link
+        ? row.postContent.replace(/\nRead more: https:\/\/\S+\n?/, '\n').trim()
+        : row.postContent
+
+      const fbId = await postToFB(row.brand, message, link, row.coverImageUrl)
       await pool.query(
         `UPDATE "SocialPostQueue" SET status = 'posted', "platformPostId" = $1,
          "postedAt" = now(), attempts = attempts + 1 WHERE id = $2`,
