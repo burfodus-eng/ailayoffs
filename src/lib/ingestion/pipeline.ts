@@ -3,6 +3,7 @@ import { PrismaClient } from '@/generated/prisma'
 import { classifyArticle, ClassificationResult } from './classify'
 import { getQueriesForRun } from './search-queries'
 import { getSourceReputation } from './source-reputation'
+import { fetchGoogleNewsArticles } from './google-news'
 import { queuePostsForEvents } from '@/lib/social/queue-posts'
 import { notifyMakeWebhook } from '@/lib/social/notify-make'
 
@@ -330,6 +331,166 @@ export async function runIngestionPipeline(
 
       // Small delay between queries to be respectful
       await new Promise(r => setTimeout(r, 1000))
+    }
+
+    // ── Google News RSS supplementary source ──
+    try {
+      console.log('[PIPELINE] Fetching Google News RSS feeds...')
+      const gnArticles = await fetchGoogleNewsArticles()
+      console.log(`[PIPELINE] Google News returned ${gnArticles.length} articles`)
+
+      for (const gnItem of gnArticles) {
+        result.articlesFound++
+
+        if (!gnItem.url || !gnItem.title) continue
+
+        // Check for duplicate article by URL
+        const existingArticle = await prisma.article.findUnique({
+          where: { url: gnItem.url },
+        })
+        if (existingArticle) {
+          result.eventsSkipped++
+          continue
+        }
+
+        result.articlesNew++
+
+        // Classify with LLM (use same provider as Exa results)
+        const classification = await classifyArticle(
+          gnItem.title,
+          '', // Google News RSS doesn't include full text
+          gnItem.url,
+          provider
+        )
+
+        if (!classification.relevant || !classification.eventType || !classification.companyName) {
+          continue
+        }
+
+        if (!classification.dateAnnounced) {
+          result.eventsSkipped++
+          continue
+        }
+
+        const reputation = getSourceReputation(gnItem.url)
+        if (reputation.tier === 'blocked') {
+          result.eventsSkipped++
+          continue
+        }
+
+        console.log(`[GN] ${gnItem.source || 'unknown'} — ${classification.companyName}: ${classification.jobCount || '?'} jobs`)
+
+        // Fuzzy duplicate check (same as Exa pipeline)
+        const candidateDate = new Date(classification.dateAnnounced)
+        const potentialDuplicates = await prisma.event.findMany({
+          where: {
+            eventType: classification.eventType as any,
+            reviewStatus: { not: 'EXCLUDED' },
+            OR: [
+              {
+                dateAnnounced: {
+                  gte: new Date(candidateDate.getTime() - 90 * 24 * 60 * 60 * 1000),
+                  lte: new Date(candidateDate.getTime() + 30 * 24 * 60 * 60 * 1000),
+                },
+              },
+              { dateAnnounced: null },
+            ],
+          },
+          select: { id: true, companyName: true, jobsCutAnnounced: true },
+        })
+
+        const duplicateCheck = potentialDuplicates.find(existing => {
+          if (!existing.companyName || !isSameCompany(existing.companyName, classification.companyName!)) return false
+          if (existing.jobsCutAnnounced && classification.jobCount) {
+            const ratio = Math.max(existing.jobsCutAnnounced, classification.jobCount) /
+                          Math.min(existing.jobsCutAnnounced, classification.jobCount)
+            if (ratio > 2) return false
+          }
+          return true
+        })
+
+        if (duplicateCheck) {
+          // Link article to existing event
+          try {
+            const domain = new URL(gnItem.url).hostname.replace('www.', '')
+            const source = await prisma.source.upsert({
+              where: { domain },
+              create: { domain, name: gnItem.source || domain },
+              update: {},
+            })
+            const article = await prisma.article.create({
+              data: {
+                title: gnItem.title,
+                url: gnItem.url,
+                sourceId: source.id,
+                publishedAt: gnItem.publishedDate ? new Date(gnItem.publishedDate) : null,
+              },
+            })
+            await prisma.articleEvent.create({
+              data: { articleId: article.id, eventId: duplicateCheck.id, isPrimary: false },
+            })
+          } catch { /* URL collision */ }
+          result.eventsSkipped++
+          continue
+        }
+
+        // Create new event
+        try {
+          const domain = new URL(gnItem.url).hostname.replace('www.', '')
+          const source = await prisma.source.upsert({
+            where: { domain },
+            create: { domain, name: gnItem.source || domain },
+            update: {},
+          })
+          const article = await prisma.article.create({
+            data: {
+              title: gnItem.title,
+              url: gnItem.url,
+              sourceId: source.id,
+              publishedAt: gnItem.publishedDate ? new Date(gnItem.publishedDate) : null,
+            },
+          })
+
+          const jobCount = classification.jobCount || 0
+          const { conservative, weighted, upper } = computeWeightedJobs(jobCount, classification.attributionCategory || 'FRINGE')
+
+          const event = await prisma.event.create({
+            data: {
+              eventType: classification.eventType as any,
+              companyName: classification.companyName,
+              country: classification.country,
+              industry: classification.industry,
+              dateAnnounced: new Date(classification.dateAnnounced),
+              jobsCutAnnounced: jobCount || null,
+              conservativeAiJobs: conservative,
+              weightedAiJobs: weighted,
+              upperAiJobs: upper,
+              attributionCategory: (classification.attributionCategory || 'FRINGE') as any,
+              attributionWeight: classification.confidenceScore,
+              confidenceScore: classification.confidenceScore,
+              provisionalConfidenceScore: classification.confidenceScore,
+              reasoningSummary: classification.reasoning,
+              publicSummary: classification.publicSummary,
+              reviewStatus: 'PROVISIONAL',
+              reviewLevel: 'AUTOMATED',
+              needsReview: true,
+            },
+          })
+
+          await prisma.articleEvent.create({
+            data: { articleId: article.id, eventId: event.id, isPrimary: true },
+          })
+
+          result.eventsCreated++
+          createdEventIds.push(event.id)
+          console.log(`NEW EVENT (GN): [${classification.eventType}] ${classification.companyName} — ${jobCount} jobs (${classification.attributionCategory})`)
+        } catch (e: any) {
+          result.errors.push(`GN event creation failed: ${e.message}`)
+        }
+      }
+    } catch (e: any) {
+      console.error(`[PIPELINE] Google News failed: ${e.message}`)
+      result.errors.push(`Google News: ${e.message}`)
     }
   } finally {
     // Update ingestion log
