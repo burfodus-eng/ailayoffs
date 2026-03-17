@@ -38,7 +38,7 @@ async function fetchUmami(token: string, path: string, params: Record<string, st
 
 async function getAllWebsites(token: string): Promise<{ id: string; name: string; domain: string; color: string }[]> {
   // Fetch all websites from Umami (paginated, get up to 100)
-  const data = await fetchUmami(token, '/api/websites', { limit: '100', offset: '0' })
+  const data = await fetchUmami(token, '/api/websites', { pageSize: '100' })
   const websites = data?.data || data || []
   if (!Array.isArray(websites)) return []
 
