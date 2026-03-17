@@ -132,7 +132,7 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
 
   console.log(`[POST QUEUE] Brands with due posts: ${brands.map(b => b.brand).join(', ')}`)
 
-  const COOLDOWN_HOURS = 4 // minimum hours between posts for the same brand
+  const COOLDOWN_HOURS = 3 // minimum hours between posts for the same brand
 
   for (const { brand } of brands) {
     // Cooldown: skip brand if it posted successfully within the last COOLDOWN_HOURS

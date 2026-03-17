@@ -19,12 +19,19 @@ async function main() {
     orderBy: { createdAt: 'desc' },
   })
 
+  // Stagger brands: each brand offset by 15 min, each post within a brand 3h apart
+  const BRAND_STAGGER_MIN = 15
+  const POST_INTERVAL_HOURS = 3
+
   const schedule = [
-    { platform: 'facebook', brand: 'ailayoffs', offset: 0 },
-    { platform: 'facebook', brand: 'aicuts', offset: 1 },
-    { platform: 'facebook', brand: 'ailayoffwatch', offset: 2 },
-    { platform: 'facebook', brand: 'robotlayoffs', offset: 3 },
+    { platform: 'facebook', brand: 'ailayoffs', brandIndex: 0 },
+    { platform: 'facebook', brand: 'aicuts', brandIndex: 1 },
+    { platform: 'facebook', brand: 'ailayoffwatch', brandIndex: 2 },
+    { platform: 'facebook', brand: 'robotlayoffs', brandIndex: 3 },
   ]
+
+  // Track how many posts per brand to calculate scheduling
+  const brandPostCount: Record<string, number> = {}
 
   let queued = 0
   const now = Date.now()
@@ -38,7 +45,14 @@ async function main() {
     const slots = schedule.filter(s => relevantBrands.includes(s.brand))
 
     for (const slot of slots) {
-      const scheduledFor = new Date(now + queued * 5 * 60 * 1000) // 5 min apart
+      const postNum = brandPostCount[slot.brand] || 0
+      // Each brand starts offset by brandIndex * 15 min, then 3h between posts
+      const scheduledFor = new Date(
+        now
+        + slot.brandIndex * BRAND_STAGGER_MIN * 60 * 1000
+        + postNum * POST_INTERVAL_HOURS * 60 * 60 * 1000
+      )
+      brandPostCount[slot.brand] = postNum + 1
       const emoji = isRobot ? '🤖' : '📊'
       const jobs = event.jobsCutAnnounced
 
