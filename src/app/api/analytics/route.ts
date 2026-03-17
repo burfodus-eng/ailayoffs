@@ -154,24 +154,10 @@ export async function GET(req: NextRequest) {
       { pageviews: 0, visitors: 0, visits: 0, bounces: 0, totaltime: 0, active: 0 }
     )
 
-    // Deduplicate visitors: since users may visit multiple sites,
-    // the raw sum overcounts. Estimate unique visitors using a
-    // statistical approach: max(single_site) + diminishing additions.
-    // Each additional site's visitors overlap with ~50-70% of existing.
-    const sortedByVisitors = [...allResults]
-      .map(s => s.stats.visitors || 0)
-      .sort((a, b) => b - a)
-
-    let estimatedUniqueVisitors = sortedByVisitors[0] || 0
-    for (let i = 1; i < sortedByVisitors.length; i++) {
-      // Each additional site adds ~30% new unique visitors (70% overlap)
-      estimatedUniqueVisitors += Math.round(sortedByVisitors[i] * 0.3)
-    }
-
+    // Use raw visitor sum — these are different sites with different audiences
+    // (F1 fans, fishing, cybersecurity, etc.) so overlap is minimal
     const totals = {
       ...rawTotals,
-      visitors: estimatedUniqueVisitors, // deduplicated estimate
-      visitorsRaw: rawTotals.visitors, // raw sum for reference
     }
 
     return NextResponse.json({
