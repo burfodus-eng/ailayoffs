@@ -1,17 +1,22 @@
 /**
  * Process the social post queue — posts any items whose scheduledFor has passed.
  * Uses Facebook /photos endpoint for posts with images (direct image upload).
+ *
+ * Picks 1 post per brand per run to prevent broken brands from blocking the queue.
+ * Skips brands with recent permission errors (permanent failures).
  */
 
 import { PrismaClient } from '@/generated/prisma'
 
-const MAX_ATTEMPTS = 3
+const MAX_ATTEMPTS = 5
+const PERMISSION_MAX_ATTEMPTS = 1 // permission errors are permanent, fail fast
 
 interface PostResult {
   processed: number
   posted: number
   failed: number
   skipped: number
+  details: { brand: string; status: string; error?: string }[]
 }
 
 /**
@@ -108,30 +113,70 @@ async function postToPlatform(
 
 /**
  * Process all due posts in the queue.
+ * Picks 1 post per brand to prevent broken brands from starving working ones.
  */
 export async function processPostQueue(prisma: PrismaClient): Promise<PostResult> {
-  const result: PostResult = { processed: 0, posted: 0, failed: 0, skipped: 0 }
+  const result: PostResult = { processed: 0, posted: 0, failed: 0, skipped: 0, details: [] }
 
-  // Find all pending posts whose scheduled time has passed
-  // Use $queryRaw to avoid Prisma adapter date comparison issues
-  const duePosts = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT id, "eventId", platform, brand, "postContent", attempts
-     FROM "SocialPostQueue"
+  // Get distinct brands with pending posts
+  const brands = await prisma.$queryRawUnsafe<{ brand: string }[]>(
+    `SELECT DISTINCT brand FROM "SocialPostQueue"
      WHERE status = 'pending' AND "scheduledFor" <= NOW() AND attempts < $1
-     ORDER BY "scheduledFor" ASC
-     LIMIT 4`,
+     ORDER BY brand`,
     MAX_ATTEMPTS
   )
 
-  if (duePosts.length === 0) return result
+  if (brands.length === 0) {
+    console.log('[POST QUEUE] No due posts')
+    return result
+  }
 
-  console.log(`[POST QUEUE] ${duePosts.length} posts due`)
+  console.log(`[POST QUEUE] Brands with due posts: ${brands.map(b => b.brand).join(', ')}`)
 
-  for (const post of duePosts) {
+  // Check each brand for recent permission errors — skip brands that are permanently broken
+  for (const { brand } of brands) {
+    // Skip brand if it has recent permission errors (last 3 posts all permission errors)
+    const recentFails = await prisma.$queryRawUnsafe<{ cnt: number }[]>(
+      `SELECT count(*)::int as cnt FROM "SocialPostQueue"
+       WHERE brand = $1 AND status = 'failed'
+       AND "errorMessage" LIKE '%Permissions error%'
+       AND "postedAt" IS NULL`,
+      brand
+    )
+    if (recentFails[0]?.cnt >= 3) {
+      console.log(`[SKIP] ${brand} — has permission errors, token needs fixing`)
+      result.details.push({ brand, status: 'skipped', error: 'permission_errors' })
+      result.skipped++
+      continue
+    }
+
+    // Pick 1 post for this brand
+    const [post] = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT id, "eventId", platform, brand, "postContent", attempts, "errorMessage"
+       FROM "SocialPostQueue"
+       WHERE status = 'pending' AND brand = $1 AND "scheduledFor" <= NOW() AND attempts < $2
+       ORDER BY "scheduledFor" ASC
+       LIMIT 1`,
+      brand, MAX_ATTEMPTS
+    )
+
+    if (!post) continue
     result.processed++
+
+    // If this post previously had a permission error, mark as failed immediately
+    if (post.errorMessage?.includes('Permissions error')) {
+      await prisma.$queryRawUnsafe(
+        `UPDATE "SocialPostQueue" SET status = 'failed', attempts = $1 WHERE id = $2`,
+        PERMISSION_MAX_ATTEMPTS, post.id
+      )
+      result.details.push({ brand, status: 'failed', error: 'permission_error_retry' })
+      result.failed++
+      continue
+    }
 
     if (!post.postContent) {
       await prisma.$queryRawUnsafe('UPDATE "SocialPostQueue" SET status = \'skipped\', "errorMessage" = \'No post content\' WHERE id = $1', post.id)
+      result.details.push({ brand, status: 'skipped', error: 'no_content' })
       result.skipped++
       continue
     }
@@ -152,20 +197,26 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
       )
 
       console.log(`[POSTED] ${post.platform}/${post.brand} — ${postId}`)
+      result.details.push({ brand, status: 'posted' })
       result.posted++
 
-      // Rate limit: 2s between posts
-      await new Promise(r => setTimeout(r, 2000))
+      // Rate limit: 3s between brands
+      await new Promise(r => setTimeout(r, 3000))
     } catch (e: any) {
+      const isPermissionError = e.message?.includes('Permissions error')
+      const isRateLimit = e.message?.includes('limit how often')
       const newAttempts = post.attempts + 1
-      const isFinal = newAttempts >= MAX_ATTEMPTS
+      const maxForThis = isPermissionError ? PERMISSION_MAX_ATTEMPTS : MAX_ATTEMPTS
+      const isFinal = newAttempts >= maxForThis
 
       await prisma.$queryRawUnsafe(
         'UPDATE "SocialPostQueue" SET status = $1, "errorMessage" = $2, attempts = $3 WHERE id = $4',
         isFinal ? 'failed' : 'pending', e.message?.substring(0, 500), newAttempts, post.id
       )
 
-      console.error(`[FAIL] ${post.platform}/${post.brand}: ${e.message}${isFinal ? ' (giving up)' : ` (attempt ${newAttempts}/${MAX_ATTEMPTS})`}`)
+      const errorType = isPermissionError ? 'permission' : isRateLimit ? 'rate_limit' : 'unknown'
+      console.error(`[FAIL] ${post.platform}/${post.brand}: ${errorType} — ${e.message?.substring(0, 100)}${isFinal ? ' (giving up)' : ` (attempt ${newAttempts}/${maxForThis})`}`)
+      result.details.push({ brand, status: 'failed', error: errorType })
       result.failed++
     }
   }

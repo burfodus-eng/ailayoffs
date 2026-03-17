@@ -6,9 +6,10 @@ export const maxDuration = 120
 
 /**
  * Process the social post queue.
- * Called every 15 minutes by the instrumentation scheduler.
+ * Called every 15 minutes by n8n scheduler.
  *
  *   GET /api/cron/post?secret=YOUR_ADMIN_SECRET
+ *   GET /api/cron/post?secret=YOUR_ADMIN_SECRET&reset=ratelimit  (one-time: reset rate-limited failures)
  */
 export async function GET(request: NextRequest) {
   const secret = request.nextUrl.searchParams.get('secret')
@@ -22,34 +23,37 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  console.log('[CRON] Processing social post queue...')
-
-  // Debug: check what the query would find
-  try {
-    const debugCount = await prisma.socialPostQueue.count({
-      where: { status: 'pending' },
-    })
-    const debugDue = await prisma.socialPostQueue.count({
-      where: {
-        status: 'pending',
-        scheduledFor: { lte: new Date() },
-        attempts: { lt: 3 },
-      },
-    })
-    console.log(`[CRON DEBUG] Total pending: ${debugCount}, Due now: ${debugDue}`)
-  } catch (e: any) {
-    console.error('[CRON DEBUG] Count failed:', e.message)
+  // One-time reset of rate-limited failures
+  const reset = request.nextUrl.searchParams.get('reset')
+  if (reset === 'ratelimit') {
+    const [result] = await prisma.$queryRawUnsafe<{ cnt: number }[]>(
+      `WITH updated AS (
+        UPDATE "SocialPostQueue" SET status = 'pending', attempts = 0, "errorMessage" = NULL
+        WHERE (status = 'failed' OR (status = 'pending' AND attempts > 0))
+        AND "errorMessage" LIKE '%limit how often%'
+        RETURNING id
+      ) SELECT count(*)::int as cnt FROM updated`
+    )
+    console.log(`[CRON] Reset ${result.cnt} rate-limited posts`)
+    return NextResponse.json({ success: true, reset: result.cnt })
   }
+
+  console.log('[CRON] Processing social post queue...')
 
   const result = await processPostQueue(prisma)
   console.log(`[CRON] Post queue: ${result.posted} posted, ${result.failed} failed, ${result.skipped} skipped`)
+  if (result.details.length > 0) {
+    console.log(`[CRON] Details: ${JSON.stringify(result.details)}`)
+  }
 
-  // Include debug info
+  // Debug info
   let debugInfo: any = {}
   try {
-    const [pending] = await prisma.$queryRawUnsafe<any[]>('SELECT count(*)::int as cnt FROM "SocialPostQueue" WHERE status = \'pending\'')
-    const [due] = await prisma.$queryRawUnsafe<any[]>('SELECT count(*)::int as cnt FROM "SocialPostQueue" WHERE status = \'pending\' AND "scheduledFor" <= NOW() AND attempts < 3')
-    debugInfo = { totalPending: pending.cnt, totalDue: due.cnt, serverTime: new Date().toISOString() }
+    const stats = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT brand, status, count(*)::int as cnt
+       FROM "SocialPostQueue" GROUP BY brand, status ORDER BY brand, status`
+    )
+    debugInfo = { stats, serverTime: new Date().toISOString() }
   } catch { /* ignore */ }
 
   return NextResponse.json({ success: true, ...result, debug: debugInfo })
