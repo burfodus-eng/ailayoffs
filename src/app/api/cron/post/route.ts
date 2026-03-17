@@ -23,19 +23,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // One-time reset of rate-limited failures
+  // Reset failures back to pending: ?reset=all or ?reset=ratelimit
   const reset = request.nextUrl.searchParams.get('reset')
-  if (reset === 'ratelimit') {
+  if (reset) {
+    const where = reset === 'all'
+      ? `status = 'failed'`
+      : `(status = 'failed' OR (status = 'pending' AND attempts > 0)) AND "errorMessage" LIKE '%limit how often%'`
     const [result] = await prisma.$queryRawUnsafe<{ cnt: number }[]>(
       `WITH updated AS (
         UPDATE "SocialPostQueue" SET status = 'pending', attempts = 0, "errorMessage" = NULL
-        WHERE (status = 'failed' OR (status = 'pending' AND attempts > 0))
-        AND "errorMessage" LIKE '%limit how often%'
+        WHERE ${where}
         RETURNING id
       ) SELECT count(*)::int as cnt FROM updated`
     )
-    console.log(`[CRON] Reset ${result.cnt} rate-limited posts`)
-    return NextResponse.json({ success: true, reset: result.cnt })
+    console.log(`[CRON] Reset ${result.cnt} posts (${reset})`)
+    return NextResponse.json({ success: true, resetType: reset, resetCount: result.cnt })
   }
 
   console.log('[CRON] Processing social post queue...')

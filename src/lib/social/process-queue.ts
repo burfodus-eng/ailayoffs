@@ -9,7 +9,6 @@
 import { PrismaClient } from '@/generated/prisma'
 
 const MAX_ATTEMPTS = 5
-const PERMISSION_MAX_ATTEMPTS = 1 // permission errors are permanent, fail fast
 
 interface PostResult {
   processed: number
@@ -133,19 +132,19 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
 
   console.log(`[POST QUEUE] Brands with due posts: ${brands.map(b => b.brand).join(', ')}`)
 
-  // Check each brand for recent permission errors — skip brands that are permanently broken
+  const COOLDOWN_HOURS = 4 // minimum hours between posts for the same brand
+
   for (const { brand } of brands) {
-    // Skip brand if it has recent permission errors (last 3 posts all permission errors)
-    const recentFails = await prisma.$queryRawUnsafe<{ cnt: number }[]>(
+    // Cooldown: skip brand if it posted successfully within the last COOLDOWN_HOURS
+    const [recent] = await prisma.$queryRawUnsafe<{ cnt: number }[]>(
       `SELECT count(*)::int as cnt FROM "SocialPostQueue"
-       WHERE brand = $1 AND status = 'failed'
-       AND "errorMessage" LIKE '%Permissions error%'
-       AND "postedAt" IS NULL`,
+       WHERE brand = $1 AND status = 'posted'
+       AND "postedAt" > NOW() - INTERVAL '${COOLDOWN_HOURS} hours'`,
       brand
     )
-    if (recentFails[0]?.cnt >= 3) {
-      console.log(`[SKIP] ${brand} — has permission errors, token needs fixing`)
-      result.details.push({ brand, status: 'skipped', error: 'permission_errors' })
+    if (recent[0]?.cnt > 0) {
+      console.log(`[COOLDOWN] ${brand} — posted within last ${COOLDOWN_HOURS}h, skipping`)
+      result.details.push({ brand, status: 'skipped', error: `cooldown_${COOLDOWN_HOURS}h` })
       result.skipped++
       continue
     }
@@ -155,24 +154,13 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
       `SELECT id, "eventId", platform, brand, "postContent", attempts, "errorMessage"
        FROM "SocialPostQueue"
        WHERE status = 'pending' AND brand = $1 AND "scheduledFor" <= NOW() AND attempts < $2
-       ORDER BY "scheduledFor" ASC
+       ORDER BY attempts ASC, "scheduledFor" ASC
        LIMIT 1`,
       brand, MAX_ATTEMPTS
     )
 
     if (!post) continue
     result.processed++
-
-    // If this post previously had a permission error, mark as failed immediately
-    if (post.errorMessage?.includes('Permissions error')) {
-      await prisma.$queryRawUnsafe(
-        `UPDATE "SocialPostQueue" SET status = 'failed', attempts = $1 WHERE id = $2`,
-        PERMISSION_MAX_ATTEMPTS, post.id
-      )
-      result.details.push({ brand, status: 'failed', error: 'permission_error_retry' })
-      result.failed++
-      continue
-    }
 
     if (!post.postContent) {
       await prisma.$queryRawUnsafe('UPDATE "SocialPostQueue" SET status = \'skipped\', "errorMessage" = \'No post content\' WHERE id = $1', post.id)
@@ -203,20 +191,17 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
       // Rate limit: 3s between brands
       await new Promise(r => setTimeout(r, 3000))
     } catch (e: any) {
-      const isPermissionError = e.message?.includes('Permissions error')
-      const isRateLimit = e.message?.includes('limit how often')
       const newAttempts = post.attempts + 1
-      const maxForThis = isPermissionError ? PERMISSION_MAX_ATTEMPTS : MAX_ATTEMPTS
-      const isFinal = newAttempts >= maxForThis
+      const isFinal = newAttempts >= MAX_ATTEMPTS
+      const errorMsg = e.message?.substring(0, 500) || 'Unknown error'
 
       await prisma.$queryRawUnsafe(
         'UPDATE "SocialPostQueue" SET status = $1, "errorMessage" = $2, attempts = $3 WHERE id = $4',
-        isFinal ? 'failed' : 'pending', e.message?.substring(0, 500), newAttempts, post.id
+        isFinal ? 'failed' : 'pending', errorMsg, newAttempts, post.id
       )
 
-      const errorType = isPermissionError ? 'permission' : isRateLimit ? 'rate_limit' : 'unknown'
-      console.error(`[FAIL] ${post.platform}/${post.brand}: ${errorType} — ${e.message?.substring(0, 100)}${isFinal ? ' (giving up)' : ` (attempt ${newAttempts}/${maxForThis})`}`)
-      result.details.push({ brand, status: 'failed', error: errorType })
+      console.error(`[FAIL] ${post.platform}/${post.brand} (attempt ${newAttempts}/${MAX_ATTEMPTS}${isFinal ? ', giving up' : ''}): ${errorMsg.substring(0, 150)}`)
+      result.details.push({ brand, status: 'failed', error: errorMsg.substring(0, 100) })
       result.failed++
     }
   }
