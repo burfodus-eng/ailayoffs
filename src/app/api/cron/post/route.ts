@@ -23,8 +23,36 @@ export async function GET(request: NextRequest) {
   }
 
   console.log('[CRON] Processing social post queue...')
+
+  // Debug: check what the query would find
+  try {
+    const debugCount = await prisma.socialPostQueue.count({
+      where: { status: 'pending' },
+    })
+    const debugDue = await prisma.socialPostQueue.count({
+      where: {
+        status: 'pending',
+        scheduledFor: { lte: new Date() },
+        attempts: { lt: 3 },
+      },
+    })
+    console.log(`[CRON DEBUG] Total pending: ${debugCount}, Due now: ${debugDue}`)
+  } catch (e: any) {
+    console.error('[CRON DEBUG] Count failed:', e.message)
+  }
+
   const result = await processPostQueue(prisma)
   console.log(`[CRON] Post queue: ${result.posted} posted, ${result.failed} failed, ${result.skipped} skipped`)
 
-  return NextResponse.json({ success: true, ...result })
+  // Include debug info
+  let debugInfo: any = {}
+  try {
+    const totalPending = await prisma.socialPostQueue.count({ where: { status: 'pending' } })
+    const totalDue = await prisma.socialPostQueue.count({
+      where: { status: 'pending', scheduledFor: { lte: new Date() }, attempts: { lt: 3 } },
+    })
+    debugInfo = { totalPending, totalDue, serverTime: new Date().toISOString() }
+  } catch { /* ignore */ }
+
+  return NextResponse.json({ success: true, ...result, debug: debugInfo })
 }
