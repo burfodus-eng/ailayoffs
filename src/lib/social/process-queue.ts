@@ -136,13 +136,13 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
 
   for (const { brand } of brands) {
     // Cooldown: skip brand if it posted successfully within the last COOLDOWN_HOURS
-    const [recent] = await prisma.$queryRawUnsafe<{ cnt: number }[]>(
+    const recentRows = await prisma.$queryRawUnsafe<{ cnt: number }[]>(
       `SELECT count(*)::int as cnt FROM "SocialPostQueue"
        WHERE brand = $1 AND status = 'posted'
        AND "postedAt" > NOW() - INTERVAL '${COOLDOWN_HOURS} hours'`,
       brand
     )
-    if (recent[0]?.cnt > 0) {
+    if (recentRows[0]?.cnt > 0) {
       console.log(`[COOLDOWN] ${brand} — posted within last ${COOLDOWN_HOURS}h, skipping`)
       result.details.push({ brand, status: 'skipped', error: `cooldown_${COOLDOWN_HOURS}h` })
       result.skipped++
