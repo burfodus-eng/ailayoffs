@@ -47,11 +47,9 @@ export async function GET(request: NextRequest) {
   // Include debug info
   let debugInfo: any = {}
   try {
-    const totalPending = await prisma.socialPostQueue.count({ where: { status: 'pending' } })
-    const totalDue = await prisma.socialPostQueue.count({
-      where: { status: 'pending', scheduledFor: { lte: new Date() }, attempts: { lt: 3 } },
-    })
-    debugInfo = { totalPending, totalDue, serverTime: new Date().toISOString() }
+    const [pending] = await prisma.$queryRawUnsafe<any[]>('SELECT count(*)::int as cnt FROM "SocialPostQueue" WHERE status = \'pending\'')
+    const [due] = await prisma.$queryRawUnsafe<any[]>('SELECT count(*)::int as cnt FROM "SocialPostQueue" WHERE status = \'pending\' AND "scheduledFor" <= NOW() AND attempts < 3')
+    debugInfo = { totalPending: pending.cnt, totalDue: due.cnt, serverTime: new Date().toISOString() }
   } catch { /* ignore */ }
 
   return NextResponse.json({ success: true, ...result, debug: debugInfo })

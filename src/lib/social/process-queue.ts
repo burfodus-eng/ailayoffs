@@ -113,14 +113,15 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
   const result: PostResult = { processed: 0, posted: 0, failed: 0, skipped: 0 }
 
   // Find all pending posts whose scheduled time has passed
-  const duePosts = await prisma.socialPostQueue.findMany({
-    where: {
-      status: 'pending',
-      scheduledFor: { lte: new Date() },
-      attempts: { lt: MAX_ATTEMPTS },
-    },
-    orderBy: { scheduledFor: 'asc' },
-  })
+  // Use $queryRaw to avoid Prisma adapter date comparison issues
+  const duePosts = await prisma.$queryRawUnsafe<any[]>(
+    `SELECT id, "eventId", platform, brand, "postContent", attempts
+     FROM "SocialPostQueue"
+     WHERE status = 'pending' AND "scheduledFor" <= NOW() AND attempts < $1
+     ORDER BY "scheduledFor" ASC
+     LIMIT 4`,
+    MAX_ATTEMPTS
+  )
 
   if (duePosts.length === 0) return result
 
@@ -130,36 +131,25 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
     result.processed++
 
     if (!post.postContent) {
-      await prisma.socialPostQueue.update({
-        where: { id: post.id },
-        data: { status: 'skipped', errorMessage: 'No post content' },
-      })
+      await prisma.$queryRawUnsafe('UPDATE "SocialPostQueue" SET status = \'skipped\', "errorMessage" = \'No post content\' WHERE id = $1', post.id)
       result.skipped++
       continue
     }
 
     try {
-      // Look up event image separately (avoids Prisma relation dependency)
+      // Look up event image
       let imageUrl: string | null = null
       try {
-        const event = await prisma.event.findUnique({
-          where: { id: post.eventId },
-          select: { coverImageUrl: true },
-        })
+        const [event] = await prisma.$queryRawUnsafe<any[]>('SELECT "coverImageUrl" FROM "Event" WHERE id = $1', post.eventId)
         imageUrl = event?.coverImageUrl || null
-      } catch { /* ignore if event lookup fails */ }
+      } catch { /* ignore */ }
 
       const { postId } = await postToPlatform(post.platform, post.brand, post.postContent, imageUrl)
 
-      await prisma.socialPostQueue.update({
-        where: { id: post.id },
-        data: {
-          status: 'posted',
-          platformPostId: postId,
-          postedAt: new Date(),
-          attempts: post.attempts + 1,
-        },
-      })
+      await prisma.$queryRawUnsafe(
+        'UPDATE "SocialPostQueue" SET status = \'posted\', "platformPostId" = $1, "postedAt" = NOW(), attempts = $2 WHERE id = $3',
+        postId, post.attempts + 1, post.id
+      )
 
       console.log(`[POSTED] ${post.platform}/${post.brand} — ${postId}`)
       result.posted++
@@ -170,14 +160,10 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
       const newAttempts = post.attempts + 1
       const isFinal = newAttempts >= MAX_ATTEMPTS
 
-      await prisma.socialPostQueue.update({
-        where: { id: post.id },
-        data: {
-          status: isFinal ? 'failed' : 'pending',
-          errorMessage: e.message,
-          attempts: newAttempts,
-        },
-      })
+      await prisma.$queryRawUnsafe(
+        'UPDATE "SocialPostQueue" SET status = $1, "errorMessage" = $2, attempts = $3 WHERE id = $4',
+        isFinal ? 'failed' : 'pending', e.message?.substring(0, 500), newAttempts, post.id
+      )
 
       console.error(`[FAIL] ${post.platform}/${post.brand}: ${e.message}${isFinal ? ' (giving up)' : ` (attempt ${newAttempts}/${MAX_ATTEMPTS})`}`)
       result.failed++
