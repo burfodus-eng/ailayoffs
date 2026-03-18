@@ -118,6 +118,7 @@ model Event {
   articleEvents              ArticleEvent[]
   revisions                  EventRevision[]
   socialPosts                SocialPostQueue[]
+  imageClassifications       ImageClassification[]
   createdAt                  DateTime            @default(now())
   updatedAt                  DateTime            @updatedAt
 
@@ -291,6 +292,35 @@ model SocialPostQueue {
   @@index([status, scheduledFor])
   @@index([eventId])
   @@unique([eventId, platform, brand])
+}
+
+// ─── IMAGE CLASSIFICATION LOG ───
+// Records every image verification/replacement by Claude Vision
+
+model ImageClassification {
+  id                String   @id @default(cuid())
+  eventId           String
+  event             Event    @relation(fields: [eventId], references: [id])
+  // What was there before
+  previousImageUrl  String?
+  // What Claude Vision said about the previous image
+  previousVerdict   String?  // "suitable" | "rejected"
+  previousReason    String?  // "toy fairy unrelated to enterprise software"
+  previousDescription String? // "plastic fairy figurine on wooden table"
+  // What replaced it (null if image was kept)
+  newImageUrl       String?
+  newSource         String?  // "pexels" | "pixabay"
+  newDescription    String?  // "modern corporate office building with glass facade"
+  // Search context
+  searchQueries     String[] // what queries were used
+  candidatesTested  Int      @default(0) // how many candidates were verified
+  // Result
+  action            String   // "kept" | "replaced" | "no_candidates" | "none_passed" | "error"
+  classifiedAt      DateTime @default(now())
+
+  @@index([eventId])
+  @@index([classifiedAt])
+  @@index([action])
 }
 
 model WeightConfig {
