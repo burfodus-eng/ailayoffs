@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
   const result = await fixEventImages(prisma)
 
-  console.log(`[CRON] Images: ${result.fixed} fixed, ${result.skipped} already ok, ${result.failed} failed`)
+  console.log(`[CRON] Images: ${result.fixed} fixed, ${result.kept} already ok, ${result.failed} failed`)
 
   return NextResponse.json({ success: true, ...result })
 }

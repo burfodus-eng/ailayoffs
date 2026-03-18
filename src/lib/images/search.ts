@@ -152,7 +152,7 @@ export async function searchImages(queries: string[]): Promise<ImageResult[]> {
     ])
     results.push(...pexels, ...pixabay)
 
-    if (results.length >= 5) break
+    if (results.length >= 10) break
 
     // Rate limit between queries
     await new Promise(r => setTimeout(r, 500))

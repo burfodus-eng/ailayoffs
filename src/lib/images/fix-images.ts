@@ -136,13 +136,13 @@ export async function fixEventImages(prisma: PrismaClient): Promise<FixResult> {
       continue
     }
 
-    // Step 3: Verify candidates until we find a good one
+    // Step 3: Verify ALL candidates — save good ones to ImageCatalogue, pick best for cover
     let bestImage: string | null = null
     let bestDescription = ''
     let bestSource = ''
     let candidatesTested = 0
 
-    for (const candidate of candidates.slice(0, 3)) {
+    for (const candidate of candidates.slice(0, 5)) {
       candidatesTested++
       try {
         const check = await verifyImage(candidate.url, {
@@ -153,13 +153,31 @@ export async function fixEventImages(prisma: PrismaClient): Promise<FixResult> {
         })
 
         if (check.suitable) {
-          bestImage = candidate.url
-          bestDescription = check.description
-          bestSource = candidate.source
-          break
+          // Save to ImageCatalogue for future use (video reels, etc)
+          try {
+            await prisma.$queryRawUnsafe(
+              `INSERT INTO "ImageCatalogue"
+               (id, url, description, industry, "eventType", "imageType", tags, source,
+                "width", height, "isVerified", "verifiedAt", "createdAt", "updatedAt")
+               VALUES (gen_random_uuid(), $1, $2, $3, $4, 'photo', $5, $6,
+                $7, $8, true, NOW(), NOW(), NOW())
+               ON CONFLICT (url) DO NOTHING`,
+              candidate.url, check.description, event.industry || 'General',
+              event.eventType, queries, candidate.source,
+              candidate.width || null, candidate.height || null
+            )
+          } catch { /* dupe or other — fine */ }
+
+          // First suitable one becomes the cover image
+          if (!bestImage) {
+            bestImage = candidate.url
+            bestDescription = check.description
+            bestSource = candidate.source
+          }
+        } else {
+          console.log(`  [REJECT] ${candidate.source}: ${check.reason}`)
         }
 
-        console.log(`  [REJECT] ${candidate.source}: ${check.reason}`)
         await new Promise(r => setTimeout(r, 1500))
       } catch {
         continue

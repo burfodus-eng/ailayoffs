@@ -323,6 +323,43 @@ model ImageClassification {
   @@index([action])
 }
 
+// ─── IMAGE CATALOGUE ───
+// Verified, tagged image library for cover images and video reels.
+// Images are classified by Claude Vision and tagged by industry/context.
+
+model ImageCatalogue {
+  id            String   @id @default(cuid())
+  url           String   @unique
+  description   String?  // "Modern corporate office building with glass facade"
+  // Categorisation
+  industry      String?  // "Technology", "Banking", "Healthcare"
+  eventType     String?  // "AI_LAYOFF", "ROBOT_LAYOFF", "AI_JOB_CREATED", "PRODUCTIVITY_GAIN"
+  imageType     String   @default("photo") // "photo", "building", "office", "factory", "data-center", "stock"
+  tags          String[] // ["corporate", "technology", "modern", "office"]
+  // Source
+  source        String?  // "pexels", "pixabay"
+  sourceId      String?  // original ID from the source API
+  // Quality
+  width         Int?
+  height        Int?
+  // Verification
+  isVerified    Boolean  @default(false) // Claude Vision approved
+  verifiedAt    DateTime?
+  // Usage tracking
+  usageCount    Int      @default(0) // how many times used as cover/reel image
+  lastUsedAt    DateTime?
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([industry])
+  @@index([eventType])
+  @@index([imageType])
+  @@index([isVerified])
+  @@index([industry, isVerified])
+  @@index([industry, eventType, isVerified])
+}
+
 model WeightConfig {
   id             String   @id @default(cuid())
   name           String   @unique
