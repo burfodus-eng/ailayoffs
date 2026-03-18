@@ -1,17 +1,7 @@
 import { prisma } from '@/lib/db'
 import { headers } from 'next/headers'
 import { getBrandFromHost, normalizeIndustry } from '@/lib/domains'
-import nextDynamic from 'next/dynamic'
-
-// Lazy-load HomeClient — defers ~200KB recharts bundle until client hydration
-const HomeClient = nextDynamic(() => import('@/components/home-client').then(m => m.HomeClient), {
-  ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="animate-pulse text-gray-400">Loading dashboard...</div>
-    </div>
-  ),
-})
+import { HomeClient } from '@/components/home-client'
 
 export const dynamic = 'force-dynamic'
 
