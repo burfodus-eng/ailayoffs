@@ -16,7 +16,7 @@ import { PrismaClient } from '@/generated/prisma'
 import { buildSearchQuery, searchImages } from './search'
 import { verifyImage } from './verify'
 
-const BATCH_SIZE = 10 // events per run
+const BATCH_SIZE = 50 // events per run
 
 interface FixResult {
   processed: number
