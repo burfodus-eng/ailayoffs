@@ -132,14 +132,14 @@ export async function processPostQueue(prisma: PrismaClient): Promise<PostResult
 
   console.log(`[POST QUEUE] Brands with due posts: ${brands.map(b => b.brand).join(', ')}`)
 
-  // Peak hours (UTC): 14:00-08:00 UTC = 6am-midnight US Pacific / 9am-3am US Eastern
-  // During peak: 1h cooldown (aggressive posting)
-  // Off-peak: 3h cooldown (gentle)
+  // Schedule based on AEST (UTC+10):
+  //   Before 8pm AEST (before 10:00 UTC): every 3h cooldown
+  //   8pm-midnight AEST (10:00-14:00 UTC): every 1h cooldown (evening prime time)
   const nowUtc = new Date()
   const utcHour = nowUtc.getUTCHours()
-  const isPeakUs = utcHour >= 14 || utcHour < 8 // 2pm-8am UTC = US daytime through midnight
-  const COOLDOWN_HOURS = isPeakUs ? 1 : 3
-  console.log(`[POST QUEUE] UTC hour: ${utcHour}, peak=${isPeakUs}, cooldown=${COOLDOWN_HOURS}h`)
+  const isEveningAest = utcHour >= 10 && utcHour < 14 // 8pm-midnight AEST
+  const COOLDOWN_HOURS = isEveningAest ? 1 : 3
+  console.log(`[POST QUEUE] UTC hour: ${utcHour}, AEST ~${(utcHour + 10) % 24}:00, evening=${isEveningAest}, cooldown=${COOLDOWN_HOURS}h`)
 
   for (const { brand } of brands) {
     // Cooldown: skip brand if it posted successfully within the last COOLDOWN_HOURS
