@@ -8,6 +8,8 @@ export interface ClassificationResult {
   country: string | null
   industry: string | null
   jobCount: number | null
+  percentageReduction: number | null
+  estimatedTotalEmployees: number | null
   dateAnnounced: string | null // ISO date
   attributionCategory: 'EXPLICIT' | 'STRONG' | 'MODERATE' | 'WEAK' | 'FRINGE' | null
   confidenceScore: number
@@ -25,7 +27,9 @@ CRITICAL RULES:
   - Articles about AI industry trends without a specific company action
 - companyName must be the SHORT, canonical company name: "Block" not "Block (formerly Square)", "Oracle" not "Oracle Corp." or "Oracle Corporation", "Meta" not "Meta Platforms Inc."
 - dateAnnounced is REQUIRED for layoff/hiring events. Use the date the action was announced. If no specific date is mentioned in the article, set to null. Do NOT guess or estimate dates. Events without dates will be REJECTED.
-- jobCount should be a specific number mentioned in the article. Do not use 0 — if no number is mentioned, set to null. Do NOT extrapolate or estimate job counts beyond what the source states.
+- jobCount should be a specific number of jobs mentioned in the article. Do not use 0 — if no number is mentioned, set to null. Do NOT extrapolate or estimate job counts beyond what the source states.
+- percentageReduction: If the article mentions a percentage (e.g. "12% workforce reduction") but no absolute job count, set this field to the percentage as a number (e.g. 12). Otherwise set to null.
+- estimatedTotalEmployees: If the article mentions the company's total workforce size or you can infer it from context (e.g. "cutting 200 of its 2,000 employees"), set this number. Otherwise set to null.
 - confidenceScore should reflect how trustworthy the SOURCE is, not just the content. Well-known news outlets (Reuters, Bloomberg, NYT, BBC, etc.) get higher scores. Unknown blogs, university subdomains, and content farms should get scores below 0.4.
 - REJECT (relevant=false) articles from sources that appear to be AI-generated content farms, SEO articles, or republished press releases with no original reporting.
 - country should be the 2-letter ISO code: "US", "AU", "UK", "IN", "DE", etc.
@@ -53,6 +57,8 @@ Respond ONLY with valid JSON:
   "country": string | null,
   "industry": string | null,
   "jobCount": number | null,
+  "percentageReduction": number | null,
+  "estimatedTotalEmployees": number | null,
   "dateAnnounced": "YYYY-MM-DD" | null,
   "attributionCategory": "EXPLICIT" | "STRONG" | "MODERATE" | "WEAK" | "FRINGE" | null,
   "confidenceScore": 0.0-1.0,
@@ -96,12 +102,12 @@ export async function classifyArticle(
     // Extract JSON from response (handle markdown code blocks)
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
-      return { relevant: false, eventType: null, companyName: null, country: null, industry: null, jobCount: null, dateAnnounced: null, attributionCategory: null, confidenceScore: 0, publicSummary: null, reasoning: 'Failed to parse LLM response' }
+      return { relevant: false, eventType: null, companyName: null, country: null, industry: null, jobCount: null, percentageReduction: null, estimatedTotalEmployees: null, dateAnnounced: null, attributionCategory: null, confidenceScore: 0, publicSummary: null, reasoning: 'Failed to parse LLM response' }
     }
 
     return JSON.parse(jsonMatch[0]) as ClassificationResult
   } catch (error: any) {
     console.error(`Classification error (${provider}):`, error.message)
-    return { relevant: false, eventType: null, companyName: null, country: null, industry: null, jobCount: null, dateAnnounced: null, attributionCategory: null, confidenceScore: 0, publicSummary: null, reasoning: `Error: ${error.message}` }
+    return { relevant: false, eventType: null, companyName: null, country: null, industry: null, jobCount: null, percentageReduction: null, estimatedTotalEmployees: null, dateAnnounced: null, attributionCategory: null, confidenceScore: 0, publicSummary: null, reasoning: `Error: ${error.message}` }
   }
 }

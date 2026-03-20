@@ -281,7 +281,44 @@ export async function runIngestionPipeline(
               },
             })
 
-            const jobCount = classification.jobCount || 0
+            // Resolve job count: use explicit count, or calculate from percentage + employee count
+            let jobCount = classification.jobCount || 0
+            if (!jobCount && classification.percentageReduction && classification.estimatedTotalEmployees) {
+              jobCount = Math.round(classification.estimatedTotalEmployees * classification.percentageReduction / 100)
+              console.log(`[CALC] ${classification.companyName}: ${classification.percentageReduction}% of ${classification.estimatedTotalEmployees} = ${jobCount} jobs`)
+            }
+            // If we only have a percentage but no employee count, try Exa search for headcount
+            if (!jobCount && classification.percentageReduction && classification.companyName) {
+              try {
+                const hcResult = await exa.searchAndContents(
+                  `${classification.companyName} total employees headcount workforce size 2025 2026`,
+                  { type: 'neural', numResults: 3, text: { maxCharacters: 1000 } }
+                )
+                for (const hcItem of hcResult.results) {
+                  if (!hcItem.text) continue
+                  // Look for employee count patterns like "5,000 employees" or "workforce of 5000"
+                  const empMatch = hcItem.text.match(/(\d[\d,]*)\s*(?:employees|workers|staff|people|workforce)/i)
+                  if (empMatch) {
+                    const totalEmp = parseInt(empMatch[1].replace(/,/g, ''))
+                    if (totalEmp > 10 && totalEmp < 10_000_000) {
+                      jobCount = Math.round(totalEmp * classification.percentageReduction / 100)
+                      console.log(`[LOOKUP] ${classification.companyName}: ${classification.percentageReduction}% of ${totalEmp} (from ${new URL(hcItem.url).hostname}) = ${jobCount} jobs`)
+                      break
+                    }
+                  }
+                }
+              } catch (e: any) {
+                console.log(`[LOOKUP] Employee count search failed for ${classification.companyName}: ${e.message}`)
+              }
+            }
+
+            // If we still have no job count (only percentage, couldn't find headcount),
+            // skip the layoff event — keep article but don't list with 0 jobs
+            if (!jobCount && classification.eventType === 'AI_LAYOFF') {
+              console.log(`SKIP (percentage only, no headcount found): ${classification.companyName} — ${classification.percentageReduction}%`)
+              result.eventsSkipped++
+              continue
+            }
             const { conservative, weighted, upper } = computeWeightedJobs(
               jobCount,
               classification.attributionCategory || 'FRINGE'
@@ -451,7 +488,40 @@ export async function runIngestionPipeline(
             },
           })
 
-          const jobCount = classification.jobCount || 0
+          // Resolve job count: use explicit count, or calculate from percentage + employee count
+          let jobCount = classification.jobCount || 0
+          if (!jobCount && classification.percentageReduction && classification.estimatedTotalEmployees) {
+            jobCount = Math.round(classification.estimatedTotalEmployees * classification.percentageReduction / 100)
+            console.log(`[CALC-GN] ${classification.companyName}: ${classification.percentageReduction}% of ${classification.estimatedTotalEmployees} = ${jobCount} jobs`)
+          }
+          if (!jobCount && classification.percentageReduction && classification.companyName) {
+            try {
+              const hcResult = await exa.searchAndContents(
+                `${classification.companyName} total employees headcount workforce size 2025 2026`,
+                { type: 'neural', numResults: 3, text: { maxCharacters: 1000 } }
+              )
+              for (const hcItem of hcResult.results) {
+                if (!hcItem.text) continue
+                const empMatch = hcItem.text.match(/(\d[\d,]*)\s*(?:employees|workers|staff|people|workforce)/i)
+                if (empMatch) {
+                  const totalEmp = parseInt(empMatch[1].replace(/,/g, ''))
+                  if (totalEmp > 10 && totalEmp < 10_000_000) {
+                    jobCount = Math.round(totalEmp * classification.percentageReduction / 100)
+                    console.log(`[LOOKUP-GN] ${classification.companyName}: ${classification.percentageReduction}% of ${totalEmp} = ${jobCount} jobs`)
+                    break
+                  }
+                }
+              }
+            } catch (e: any) {
+              console.log(`[LOOKUP-GN] Employee count search failed for ${classification.companyName}: ${e.message}`)
+            }
+          }
+          if (!jobCount && classification.eventType === 'AI_LAYOFF') {
+            console.log(`SKIP-GN (percentage only, no headcount): ${classification.companyName}`)
+            result.eventsSkipped++
+            continue
+          }
+
           const { conservative, weighted, upper } = computeWeightedJobs(jobCount, classification.attributionCategory || 'FRINGE')
 
           const event = await prisma.event.create({
