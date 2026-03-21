@@ -123,6 +123,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           strategy="lazyOnload"
           dangerouslySetInnerHTML={{ __html: `
             (function(){
+              // Skip analytics for site owner: visit any page with ?notrack to opt out
+              if (window.location.search.indexOf('notrack') !== -1) {
+                localStorage.setItem('umami_disabled', '1');
+                return;
+              }
+              if (localStorage.getItem('umami_disabled') === '1') return;
+
               var ids = {
                 'ailayoffs.com.au': '926a73bd-e2d9-4413-9949-32a638889802',
                 'aicuts.com.au': '8506d74b-abab-4439-a375-78373368b4a1',
