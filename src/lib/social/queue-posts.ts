@@ -68,11 +68,46 @@ function buildEventPostText(event: {
   const jobs = event.jobsCutAnnounced
   const summary = event.publicSummary || ''
 
+  // Pick a random intro template to keep posts feeling fresh
+  const jobCount = jobs ? jobs.toLocaleString() : null
+
+  const aiIntros = jobCount ? [
+    `📊 ${company} cuts ${jobCount} jobs amid AI transformation.`,
+    `⚡ ${company} is slashing ${jobCount} roles as AI reshapes the workforce.`,
+    `🔻 ${jobCount} jobs gone at ${company} — AI cited as a key driver.`,
+    `📉 ${company} to shed ${jobCount} positions in AI-driven restructuring.`,
+    `💼 ${company} announces ${jobCount} job cuts linked to AI adoption.`,
+    `🚨 ${company} eliminating ${jobCount} roles as automation accelerates.`,
+    `📢 ${jobCount} workers at ${company} displaced by AI shift.`,
+    `⬇️ ${company} downsizes by ${jobCount} as AI takes on more tasks.`,
+    `🔄 ${company} restructures, cutting ${jobCount} jobs in AI pivot.`,
+    `📊 AI claims ${jobCount} more jobs — this time at ${company}.`,
+  ] : [
+    `📊 ${company} announces AI-driven workforce restructuring.`,
+    `⚡ ${company} reshuffles workforce amid AI transformation.`,
+    `🔄 ${company} restructures operations as AI adoption deepens.`,
+    `💼 ${company} confirms workforce changes linked to AI strategy.`,
+    `📢 ${company} announces layoffs tied to automation push.`,
+  ]
+
+  const robotIntros = jobCount ? [
+    `🤖 ${company} displaces ${jobCount} workers through automation and robotics.`,
+    `⚙️ ${jobCount} jobs at ${company} replaced by robots and automation.`,
+    `🦾 ${company} automates ${jobCount} roles with robotics deployment.`,
+    `🤖 Automation claims ${jobCount} positions at ${company}.`,
+    `🔧 ${company} swaps ${jobCount} workers for robotic systems.`,
+  ] : [
+    `🤖 ${company} announces automation-driven workforce changes.`,
+    `⚙️ ${company} turns to robotics, displacing human workers.`,
+    `🦾 Robots take over at ${company} — workforce impact confirmed.`,
+  ]
+
+  const intros = event.eventType === 'ROBOT_LAYOFF' ? robotIntros : aiIntros
+  const intro = intros[Math.floor(Math.random() * intros.length)]
+
   if (platform === 'x') {
     // 280 char limit
-    let text = jobs
-      ? `${company} cuts ${jobs.toLocaleString()} jobs amid AI/automation shift.`
-      : `${company} announces workforce changes linked to AI/automation.`
+    let text = intro
     text += `\n\n${summary.substring(0, 180)}`
     text += '\n\n#AILayoffs #FutureOfWork'
     return text.substring(0, 280)
@@ -80,16 +115,7 @@ function buildEventPostText(event: {
 
   // Facebook / Threads / Reddit — longer format
   const parts: string[] = []
-
-  if (event.eventType === 'ROBOT_LAYOFF') {
-    parts.push(jobs
-      ? `🤖 ${company} displaces ${jobs.toLocaleString()} workers through automation and robotics.`
-      : `🤖 ${company} announces automation-driven workforce changes.`)
-  } else {
-    parts.push(jobs
-      ? `📊 ${company} cuts ${jobs.toLocaleString()} jobs amid AI transformation.`
-      : `📊 ${company} announces AI-driven workforce restructuring.`)
-  }
+  parts.push(intro)
 
   parts.push('')
   if (summary) {
